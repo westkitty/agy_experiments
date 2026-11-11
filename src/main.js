@@ -59,6 +59,13 @@ class ImpossibleCinemaApp {
     this.lastTimestamp = performance.now();
     this.sceneDuration = 50.0; // Deterministic 50-second loop per experiment
 
+    // WCAG Accessibility: Dynamic reduced motion listener
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    this.reducedMotion = motionQuery.matches;
+    motionQuery.addEventListener('change', (e) => {
+      this.reducedMotion = e.matches;
+    });
+
     this.checkReducedMotion();
     this.initWebGL();
     this.initEvents();
@@ -211,12 +218,8 @@ class ImpossibleCinemaApp {
 
     if (!this.renderer || !this.activeSceneInstance) return;
 
-    if (this.reducedMotion) {
-      // Gentle hero state at 28s without fast motion
-      this.sceneElapsedTime = 28.0;
-    } else {
-      this.sceneElapsedTime += deltaTime;
-    }
+    const dt = this.reducedMotion ? deltaTime * 0.35 : deltaTime;
+    this.sceneElapsedTime += dt;
 
     // Check for Autoplay progression or looping
     if (this.sceneElapsedTime >= this.sceneDuration) {
@@ -237,7 +240,7 @@ class ImpossibleCinemaApp {
 
     // Update and render active experiment
     try {
-      this.activeSceneInstance.update(this.sceneElapsedTime, deltaTime, progress);
+      this.activeSceneInstance.update(this.sceneElapsedTime, dt, progress, this.reducedMotion);
       this.activeSceneInstance.render(this.renderer);
     } catch (err) {
       console.error('Error during scene update/render:', err);
