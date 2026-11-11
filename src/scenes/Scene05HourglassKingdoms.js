@@ -79,12 +79,13 @@ export class Scene05HourglassKingdoms {
 
           if (s > 0.0001 && s < 0.9999) {
             // In transit between upper and lower kingdom
-            // Funneling into neck at y = 0, x=0, z=0
             float height = mix(aUpperPos.y, aLowerPos.y, s);
             float neckCloseness = 1.0 - abs(height) / 35.0;
-            float r = mix(length(aUpperPos.xz), 0.45, clamp(neckCloseness * 1.3, 0.0, 1.0));
-            // High-speed helical vortex through the neck
-            float angle = aSwirlPhase + uTime * 4.5 + s * 9.42;
+            // Funnel constriction with high centrifugal acceleration through waist
+            float r = mix(length(aUpperPos.xz), 0.35, clamp(neckCloseness * 1.4, 0.0, 1.0));
+            // Centrifugal spiral velocity peaks at neck y = 0
+            float spinSpeed = (1.0 + neckCloseness * 3.5);
+            float angle = aSwirlPhase + uTime * 3.5 * spinSpeed + s * 14.13;
 
             currentPos = vec3(cos(angle) * r, height, sin(angle) * r);
             vIsGlow = 1.0;
@@ -111,11 +112,17 @@ export class Scene05HourglassKingdoms {
           vec3 stoneColor = vec3(0.76, 0.62, 0.45);
           vec3 glowColor = vec3(1.2, 0.95, 0.55);
 
+          // Friction glow during high-velocity neck constriction
+          float neckHeat = clamp(1.0 - abs(vWorldPos.y) / 9.0, 0.0, 1.0) * vIsGlow;
+          vec3 hotEmber = vec3(1.3, 0.65, 0.2);
+
           // Block face shading for architectural relief
-          vec3 viewDir = normalize(cameraPosition - vWorldPos);
           float depthShade = 0.75 + 0.25 * sin(vWorldPos.y * 3.0);
 
-          vec3 col = mix(stoneColor * depthShade, glowColor * 2.2, vIsGlow);
+          vec3 baseStone = stoneColor * depthShade;
+          vec3 col = mix(baseStone, glowColor * 2.2, vIsGlow);
+          col += hotEmber * (neckHeat * 1.8);
+
           gl_FragColor = vec4(col, 1.0);
         }
       `
