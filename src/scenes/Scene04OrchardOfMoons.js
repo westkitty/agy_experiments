@@ -252,6 +252,42 @@ export class Scene04OrchardOfMoons {
       this.petalLines.push(line);
     }
 
+    // 4b. Sacred Geometric Spirograph Constellation Web (Connecting detached moons)
+    const chordCount = this.moonCount * 2;
+    const constellationPositions = new Float32Array(chordCount * 2 * 3);
+    const constellationColors = new Float32Array(chordCount * 2 * 3);
+
+    // Gradient between moon golden sheen and ethereal celestial cyan
+    for (let c = 0; c < chordCount; c++) {
+      const isCross = (c % 2 === 1);
+      const r1 = isCross ? 0.35 : 1.0;
+      const g1 = isCross ? 0.9 : 0.85;
+      const b1 = isCross ? 1.0 : 0.45;
+      const r2 = 0.95; const g2 = 0.9; const b2 = 0.7;
+
+      const vIdx = c * 6;
+      constellationColors[vIdx + 0] = r1; constellationColors[vIdx + 1] = g1; constellationColors[vIdx + 2] = b1;
+      constellationColors[vIdx + 3] = r2; constellationColors[vIdx + 4] = g2; constellationColors[vIdx + 5] = b2;
+    }
+
+    const constGeo = new THREE.BufferGeometry();
+    constGeo.setAttribute('position', new THREE.BufferAttribute(constellationPositions, 3));
+    constGeo.setAttribute('color', new THREE.BufferAttribute(constellationColors, 3));
+    this.disposables.push(constGeo);
+
+    const constMat = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending
+    });
+    this.disposables.push(constMat);
+
+    this.constellationMesh = new THREE.LineSegments(constGeo, constMat);
+    this.constellationGeo = constGeo;
+    this.constellationMat = constMat;
+    this.group.add(this.constellationMesh);
+
     // Starry Void
     const starCount = 1200;
     const starPositions = new Float32Array(starCount * 3);
@@ -412,6 +448,32 @@ export class Scene04OrchardOfMoons {
       line.material.opacity = flowerClimax * 0.75;
       line.rotation.y = t * 0.08 + (pIdx * 0.1);
     });
+
+    // Sacred Geometric Constellation Chords (connecting moons into spirograph lattice)
+    if (this.constellationGeo && this.constellationMat) {
+      this.constellationMat.opacity = flowerClimax * 0.85;
+      if (flowerClimax > 0.01) {
+        const lineArray = this.constellationGeo.attributes.position.array;
+        let ptr = 0;
+        const total = this.moons.length;
+        for (let i = 0; i < total; i++) {
+          const next1 = (i + 1) % total;
+          const next2 = (i + 6) % total;
+          const p0 = this.moons[i].mesh.position;
+          const p1 = this.moons[next1].mesh.position;
+          const p2 = this.moons[next2].mesh.position;
+
+          // Adjacent petal perimeter chord
+          lineArray[ptr++] = p0.x; lineArray[ptr++] = p0.y; lineArray[ptr++] = p0.z;
+          lineArray[ptr++] = p1.x; lineArray[ptr++] = p1.y; lineArray[ptr++] = p1.z;
+
+          // Cross-petal spirograph star chord
+          lineArray[ptr++] = p0.x; lineArray[ptr++] = p0.y; lineArray[ptr++] = p0.z;
+          lineArray[ptr++] = p2.x; lineArray[ptr++] = p2.y; lineArray[ptr++] = p2.z;
+        }
+        this.constellationGeo.attributes.position.needsUpdate = true;
+      }
+    }
 
     // Camera Choreography
     let camPos = new THREE.Vector3();

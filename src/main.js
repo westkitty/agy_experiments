@@ -250,5 +250,5 @@ class ImpossibleCinemaApp {
 
 // Launch the application when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
-  new ImpossibleCinemaApp();
+  window.app = new ImpossibleCinemaApp();
 });
