@@ -47,16 +47,47 @@ export class Scene04OrchardOfMoons {
       pos.setXYZ(i, x * 1.3, y, z * 1.3);
     }
     islandGeo.computeVertexNormals();
-    this.disposables.push(islandGeo);
+    // Initialize shared sap uniforms
+    this.sapUniforms = {
+      uTime: { value: 0 },
+      uGlow: { value: 0 }
+    };
 
-    const islandMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0c10,
-      roughness: 0.95,
-      metalness: 0.1
+    this.islandMat = new THREE.ShaderMaterial({
+      uniforms: this.sapUniforms,
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vWorldPos;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uGlow;
+        varying vec3 vNormal;
+        varying vec3 vWorldPos;
+        void main() {
+          vec3 rock = vec3(0.045, 0.05, 0.07);
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+          
+          // Bioluminescent root veins penetrating deep into asteroid core
+          float veinNoise = sin(vWorldPos.x * 0.4 + vWorldPos.z * 0.4 + sin(vWorldPos.y * 0.8));
+          float rootPulse = smoothstep(0.72, 0.96, sin(vWorldPos.y * 0.35 - uTime * 2.0 + veinNoise)) * uGlow;
+          vec3 goldVein = vec3(1.0, 0.85, 0.4) * 1.8;
+          
+          vec3 finalColor = mix(rock, goldVein, rootPulse * 0.85) + vec3(0.08, 0.12, 0.22) * fresnel * 0.6;
+          gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `
     });
-    this.disposables.push(islandMat);
+    this.disposables.push(this.islandMat);
 
-    this.islandMesh = new THREE.Mesh(islandGeo, islandMat);
+    this.islandMesh = new THREE.Mesh(islandGeo, this.islandMat);
     this.islandMesh.position.set(0, -22, 0);
     this.group.add(this.islandMesh);
 
@@ -240,11 +271,6 @@ export class Scene04OrchardOfMoons {
     ]);
     const trunkGeo = new THREE.TubeGeometry(trunkCurve, 32, 3.8, 12, false);
     this.disposables.push(trunkGeo);
-
-    this.sapUniforms = {
-      uTime: { value: 0 },
-      uGlow: { value: 0 }
-    };
 
     const treeMat = new THREE.ShaderMaterial({
       uniforms: this.sapUniforms,
