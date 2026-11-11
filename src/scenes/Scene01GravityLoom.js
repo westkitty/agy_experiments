@@ -166,6 +166,21 @@ export class Scene01GravityLoom {
           float g3 = getGravityWell(p, uMass3, 20.0, 30.0);
           float totalWell = g1 + g2 + g3;
 
+          // Tangential gravitational vortex swirl around masses
+          vec2 d1 = p.xz - uMass1.xz;
+          float len1 = length(d1);
+          vec2 swirl1 = vec2(-d1.y, d1.x) / (len1 * 0.08 + 1.0) * exp(-len1 * 0.03) * 3.2;
+
+          vec2 d2 = p.xz - uMass2.xz;
+          float len2 = length(d2);
+          vec2 swirl2 = vec2(-d2.y, d2.x) / (len2 * 0.08 + 1.0) * exp(-len2 * 0.03) * 2.8;
+
+          vec2 d3 = p.xz - uMass3.xz;
+          float len3 = length(d3);
+          vec2 swirl3 = vec2(-d3.y, d3.x) / (len3 * 0.08 + 1.0) * exp(-len3 * 0.03) * 2.5;
+
+          p.xz += swirl1 + swirl2 + swirl3;
+
           // Traveling micro-waves on the membrane
           float microWaves = snoise(vec3(p.x * 0.02, p.z * 0.02, uTime * 0.35)) * 4.5;
           p.y += totalWell + microWaves;
@@ -192,10 +207,14 @@ export class Scene01GravityLoom {
             discard;
           }
 
-          // Filament weave pattern
-          vec2 grid = abs(fract(vUv * 90.0) - 0.5);
-          float line = min(grid.x, grid.y);
-          float filament = smoothstep(0.07, 0.01, line);
+          // Multi-frequency filament weave pattern with anisotropic sheen
+          vec2 gridMajor = abs(fract(vUv * 90.0) - 0.5);
+          vec2 gridMinor = abs(fract(vUv * 270.0) - 0.5);
+          float lineMajor = min(gridMajor.x, gridMajor.y);
+          float lineMinor = min(gridMinor.x, gridMinor.y);
+          float filamentMajor = smoothstep(0.075, 0.012, lineMajor);
+          float filamentMinor = smoothstep(0.095, 0.02, lineMinor) * 0.4;
+          float filament = max(filamentMajor, filamentMinor);
 
           // Deep woven gold coloring
           vec3 goldBase = vec3(0.85, 0.65, 0.25);
