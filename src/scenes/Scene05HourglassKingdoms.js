@@ -209,9 +209,64 @@ export class Scene05HourglassKingdoms {
   }
 
   createHourglassFrame() {
-    // 1. Bronze Top & Bottom Plinths
-    const plinthGeo = new THREE.CylinderGeometry(24, 25, 4.0, 36);
+    // 1. Bronze Top & Bottom Plinths with Astrolabe Engravings
+    const plinthGeo = new THREE.CylinderGeometry(24, 25, 4.0, 48);
     this.disposables.push(plinthGeo);
+
+    this.plinthMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uSunDir: { value: new THREE.Vector3(0.4, 0.8, 0.5).normalize() }
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vWorldPos;
+        varying vec3 vLocalPos;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vLocalPos = position;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uSunDir;
+        varying vec3 vNormal;
+        varying vec3 vWorldPos;
+        varying vec3 vLocalPos;
+
+        void main() {
+          vec3 bronzeBase = vec3(0.52, 0.36, 0.22);
+          vec3 bronzeHighlight = vec3(0.92, 0.74, 0.45);
+          vec3 verdigrisPatina = vec3(0.14, 0.32, 0.25);
+
+          // Astrolabe dial concentric rings on plinth face (|vLocalPos.y| > 1.5)
+          float r = length(vLocalPos.xz);
+          float ring1 = smoothstep(0.06, 0.01, abs(r - 8.0));
+          float ring2 = smoothstep(0.06, 0.01, abs(r - 14.0));
+          float ring3 = smoothstep(0.06, 0.01, abs(r - 20.0));
+          float rings = max(ring1, max(ring2, ring3));
+
+          // 24 astronomical hour graduations
+          float angle = atan(vLocalPos.z, vLocalPos.x);
+          float ticks = smoothstep(0.03, 0.008, abs(fract(angle * 24.0 / 6.28318) - 0.5)) * step(8.0, r) * step(r, 20.0);
+          float engraving = max(rings, ticks) * step(1.5, abs(vLocalPos.y));
+
+          vec3 surfaceCol = mix(bronzeBase, verdigrisPatina, engraving * 0.75);
+          surfaceCol = mix(surfaceCol, bronzeHighlight, (1.0 - engraving) * 0.28);
+
+          // Directional sunlight diffuse & specular
+          float NdotL = max(dot(vNormal, uSunDir), 0.0);
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          vec3 halfDir = normalize(uSunDir + viewDir);
+          float spec = pow(max(dot(vNormal, halfDir), 0.0), 24.0) * (0.85 - engraving * 0.6);
+
+          vec3 col = surfaceCol * (0.35 + NdotL * 0.75) + vec3(1.0, 0.85, 0.55) * spec;
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `
+    });
+    this.disposables.push(this.plinthMat);
 
     const bronzeMat = new THREE.MeshStandardMaterial({
       color: 0x8a5828,
@@ -220,11 +275,11 @@ export class Scene05HourglassKingdoms {
     });
     this.disposables.push(bronzeMat);
 
-    const topPlinth = new THREE.Mesh(plinthGeo, bronzeMat);
+    const topPlinth = new THREE.Mesh(plinthGeo, this.plinthMat);
     topPlinth.position.y = 39;
     this.group.add(topPlinth);
 
-    const bottomPlinth = new THREE.Mesh(plinthGeo, bronzeMat);
+    const bottomPlinth = new THREE.Mesh(plinthGeo, this.plinthMat);
     bottomPlinth.position.y = -39;
     this.group.add(bottomPlinth);
 

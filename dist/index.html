@@ -5154,7 +5154,53 @@ float hash21(vec2 p) {
 
           gl_FragColor = vec4(col, 1.0);
         }
-      `});this.disposables.push(a),this.instancedGrains=new Gr(i,a,this.grainCount);let o=new Float32Array(this.grainCount*3),s=new Float32Array(this.grainCount*3),c=new Float32Array(this.grainCount),l=new Float32Array(this.grainCount);for(let e=0;e<this.grainCount;e++){let t=e%8,n=t*Math.PI*2/8,r=t===0?0:6+e%5*2.2;t===0?14+e%40*.5:8+e%25*.45;let i=Math.cos(n)*r+(e%3-1)*.8,a=Math.sin(n)*r+((e+1)%3-1)*.8,u=6+e%30*.9;o[e*3+0]=i,o[e*3+1]=Math.min(u,34),o[e*3+2]=a;let d=e%6,f=e/this.grainCount*Math.PI*2*12,p=3+d*2.8,m=Math.cos(Su(p/18,0,1)*Math.PI*.5)*14,h=Math.cos(f)*p,g=Math.sin(f)*p,_=-32+m+e%4*.9;s[e*3+0]=h,s[e*3+1]=Math.min(_,-8),s[e*3+2]=g,c[e]=1-(o[e*3+1]-6)/28,c[e]=Su(c[e]*.7+Math.random()*.15,0,.85),l[e]=Math.random()*Math.PI*2}i.setAttribute(`aUpperPos`,new Lr(o,3)),i.setAttribute(`aLowerPos`,new Lr(s,3)),i.setAttribute(`aGrainDelay`,new Lr(c,1)),i.setAttribute(`aSwirlPhase`,new Lr(l,1)),this.group.add(this.instancedGrains),n.add(this.group)}createHourglassFrame(){let e=new Ci(24,25,4,36);this.disposables.push(e);let t=new ao({color:9066536,metalness:.85,roughness:.35});this.disposables.push(t);let n=new Y(e,t);n.position.y=39,this.group.add(n);let r=new Y(e,t);r.position.y=-39,this.group.add(r);let i=new Ci(1.2,1.2,78,16);this.disposables.push(i);for(let e=0;e<4;e++){let n=e*Math.PI*2/4,r=new Y(i,t);r.position.set(Math.cos(n)*22,0,Math.sin(n)*22),this.group.add(r)}let a=new Ja(3.6,.9,16,32);a.rotateX(Math.PI/2),this.disposables.push(a);let o=new Y(a,t);o.position.y=0,this.group.add(o);let s=new ao({color:13934664,metalness:.9,roughness:.25});this.disposables.push(s);let c=new Ja(5.8,.3,16,48);this.disposables.push(c),this.astrolabeInner=new Y(c,s),this.astrolabeInner.rotation.x=Math.PI/2,this.group.add(this.astrolabeInner);let l=new Ja(8.2,.35,16,48);this.disposables.push(l),this.astrolabeOuter=new Y(l,s),this.astrolabeOuter.rotation.x=Math.PI/2,this.group.add(this.astrolabeOuter);let u=[];for(let e=-37;e<=37;e+=1.5){let t=Math.abs(e)/37,n=2.4+Math.sin(t*Math.PI*.9)*18;u.push(new G(n,e))}let d=new Wa(u,36);this.disposables.push(d);let f=new X({transparent:!0,side:2,depthWrite:!1,uniforms:{uCamPos:{value:new K}},vertexShader:`
+      `});this.disposables.push(a),this.instancedGrains=new Gr(i,a,this.grainCount);let o=new Float32Array(this.grainCount*3),s=new Float32Array(this.grainCount*3),c=new Float32Array(this.grainCount),l=new Float32Array(this.grainCount);for(let e=0;e<this.grainCount;e++){let t=e%8,n=t*Math.PI*2/8,r=t===0?0:6+e%5*2.2;t===0?14+e%40*.5:8+e%25*.45;let i=Math.cos(n)*r+(e%3-1)*.8,a=Math.sin(n)*r+((e+1)%3-1)*.8,u=6+e%30*.9;o[e*3+0]=i,o[e*3+1]=Math.min(u,34),o[e*3+2]=a;let d=e%6,f=e/this.grainCount*Math.PI*2*12,p=3+d*2.8,m=Math.cos(Su(p/18,0,1)*Math.PI*.5)*14,h=Math.cos(f)*p,g=Math.sin(f)*p,_=-32+m+e%4*.9;s[e*3+0]=h,s[e*3+1]=Math.min(_,-8),s[e*3+2]=g,c[e]=1-(o[e*3+1]-6)/28,c[e]=Su(c[e]*.7+Math.random()*.15,0,.85),l[e]=Math.random()*Math.PI*2}i.setAttribute(`aUpperPos`,new Lr(o,3)),i.setAttribute(`aLowerPos`,new Lr(s,3)),i.setAttribute(`aGrainDelay`,new Lr(c,1)),i.setAttribute(`aSwirlPhase`,new Lr(l,1)),this.group.add(this.instancedGrains),n.add(this.group)}createHourglassFrame(){let e=new Ci(24,25,4,48);this.disposables.push(e),this.plinthMat=new X({uniforms:{uSunDir:{value:new K(.4,.8,.5).normalize()}},vertexShader:`
+        varying vec3 vNormal;
+        varying vec3 vWorldPos;
+        varying vec3 vLocalPos;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vLocalPos = position;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,fragmentShader:`
+        uniform vec3 uSunDir;
+        varying vec3 vNormal;
+        varying vec3 vWorldPos;
+        varying vec3 vLocalPos;
+
+        void main() {
+          vec3 bronzeBase = vec3(0.52, 0.36, 0.22);
+          vec3 bronzeHighlight = vec3(0.92, 0.74, 0.45);
+          vec3 verdigrisPatina = vec3(0.14, 0.32, 0.25);
+
+          // Astrolabe dial concentric rings on plinth face (|vLocalPos.y| > 1.5)
+          float r = length(vLocalPos.xz);
+          float ring1 = smoothstep(0.06, 0.01, abs(r - 8.0));
+          float ring2 = smoothstep(0.06, 0.01, abs(r - 14.0));
+          float ring3 = smoothstep(0.06, 0.01, abs(r - 20.0));
+          float rings = max(ring1, max(ring2, ring3));
+
+          // 24 astronomical hour graduations
+          float angle = atan(vLocalPos.z, vLocalPos.x);
+          float ticks = smoothstep(0.03, 0.008, abs(fract(angle * 24.0 / 6.28318) - 0.5)) * step(8.0, r) * step(r, 20.0);
+          float engraving = max(rings, ticks) * step(1.5, abs(vLocalPos.y));
+
+          vec3 surfaceCol = mix(bronzeBase, verdigrisPatina, engraving * 0.75);
+          surfaceCol = mix(surfaceCol, bronzeHighlight, (1.0 - engraving) * 0.28);
+
+          // Directional sunlight diffuse & specular
+          float NdotL = max(dot(vNormal, uSunDir), 0.0);
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          vec3 halfDir = normalize(uSunDir + viewDir);
+          float spec = pow(max(dot(vNormal, halfDir), 0.0), 24.0) * (0.85 - engraving * 0.6);
+
+          vec3 col = surfaceCol * (0.35 + NdotL * 0.75) + vec3(1.0, 0.85, 0.55) * spec;
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `}),this.disposables.push(this.plinthMat);let t=new ao({color:9066536,metalness:.85,roughness:.35});this.disposables.push(t);let n=new Y(e,this.plinthMat);n.position.y=39,this.group.add(n);let r=new Y(e,this.plinthMat);r.position.y=-39,this.group.add(r);let i=new Ci(1.2,1.2,78,16);this.disposables.push(i);for(let e=0;e<4;e++){let n=e*Math.PI*2/4,r=new Y(i,t);r.position.set(Math.cos(n)*22,0,Math.sin(n)*22),this.group.add(r)}let a=new Ja(3.6,.9,16,32);a.rotateX(Math.PI/2),this.disposables.push(a);let o=new Y(a,t);o.position.y=0,this.group.add(o);let s=new ao({color:13934664,metalness:.9,roughness:.25});this.disposables.push(s);let c=new Ja(5.8,.3,16,48);this.disposables.push(c),this.astrolabeInner=new Y(c,s),this.astrolabeInner.rotation.x=Math.PI/2,this.group.add(this.astrolabeInner);let l=new Ja(8.2,.35,16,48);this.disposables.push(l),this.astrolabeOuter=new Y(l,s),this.astrolabeOuter.rotation.x=Math.PI/2,this.group.add(this.astrolabeOuter);let u=[];for(let e=-37;e<=37;e+=1.5){let t=Math.abs(e)/37,n=2.4+Math.sin(t*Math.PI*.9)*18;u.push(new G(n,e))}let d=new Wa(u,36);this.disposables.push(d);let f=new X({transparent:!0,side:2,depthWrite:!1,uniforms:{uCamPos:{value:new K}},vertexShader:`
         varying vec3 vNormal;
         varying vec3 vWorldPos;
         void main() {
