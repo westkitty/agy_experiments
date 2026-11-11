@@ -4902,25 +4902,45 @@ float hash21(vec2 p) {
         `});this.disposables.push(i);let a=new X(o,i);a.scale.setScalar(n),a.position.copy(r),this.group.add(a);let s=e%6,c=s*Math.PI*2/6,l=38+e%8*4.5,u=16+e%5*5,d=.45+e%4*.08;this.moons.push({mesh:a,mat:i,anchor:r.clone(),size:n,baseAngle:c,petalRadius:l,heightRange:u,speed:d,petalIndex:s,detachDelay:8+e/this.moonCount*12})}this.petalLines=[];for(let e=0;e<6;e++){let t=new Float32Array(360),n=e*Math.PI*2/6;for(let e=0;e<120;e++){let r=e/120*Math.PI*2,i=45*Math.sin(r*.5),a=n+Math.sin(r)*.45;t[e*3+0]=Math.cos(a)*i,t[e*3+1]=Math.sin(r*2)*14+12,t[e*3+2]=Math.sin(a)*i}let r=new lr;r.setAttribute(`position`,new Jn(t,3)),this.disposables.push(r);let i=new Zr({color:16765559,transparent:!0,opacity:0,blending:2});this.disposables.push(i);let a=new ai(r,i);this.group.add(a),this.petalLines.push(a)}let s=1200,c=new Float32Array(s*3);for(let e=0;e<s;e++)c[e*3+0]=(Math.random()-.5)*800,c[e*3+1]=(Math.random()-.5)*800,c[e*3+2]=(Math.random()-.5)*800;let l=new lr;l.setAttribute(`position`,new Jn(c,3)),this.disposables.push(l);let u=new si({color:10075118,size:1.5,transparent:!0,opacity:.6});this.disposables.push(u),this.group.add(new fi(l,u)),n.add(this.group)}createTree(){let e=new Ga(new Mi([new K(0,-20,0),new K(1,-10,-1),new K(-1.5,2,1),new K(0,14,0)]),32,3.8,12,!1);this.disposables.push(e);let t=new eo({uniforms:this.sapUniforms,vertexShader:`
         varying vec3 vNormal;
         varying vec3 vWorldPos;
+        varying vec2 vUv;
         void main() {
+          vUv = uv;
           vNormal = normalize(normalMatrix * normal);
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
           vWorldPos = worldPos.xyz;
           gl_Position = projectionMatrix * viewMatrix * worldPos;
         }
       `,fragmentShader:`
+        ${xu}
         uniform float uTime;
         uniform float uGlow;
         varying vec3 vNormal;
         varying vec3 vWorldPos;
+        varying vec2 vUv;
         void main() {
-          // Obsidian black bark
-          vec3 bark = vec3(0.04, 0.045, 0.06);
-          // Luminous golden sap veins rising upwards
-          float sapWave = sin(vWorldPos.y * 0.45 - uTime * 2.5);
-          float vein = smoothstep(0.7, 0.95, sapWave) * uGlow;
-          vec3 goldSap = vec3(1.0, 0.85, 0.4) * 2.2;
-          vec3 finalColor = mix(bark, goldSap, vein * 0.9);
+          // Obsidian bark with procedural woodgrain fissures
+          float barkFissure = snoise(vec3(vUv.x * 18.0, vUv.y * 4.0, 0.0));
+          vec3 bark = mix(vec3(0.03, 0.035, 0.05), vec3(0.08, 0.07, 0.09), barkFissure * 0.5 + 0.5);
+
+          // Longitudinal capillary pulse flowing along trunk and branches to tips
+          float branchFlow = vUv.y * 8.0 - uTime * 2.2;
+          float capillaryNoise = snoise(vec3(vUv.x * 24.0, branchFlow * 0.5, uTime * 0.3));
+
+          // Bidirectional harmonic pulse
+          float pulsePrimary = smoothstep(0.68, 0.96, sin(branchFlow + capillaryNoise * 1.5));
+          float pulseHarmonic = smoothstep(0.8, 0.98, sin(branchFlow * 1.618 - capillaryNoise));
+          float combinedVein = max(pulsePrimary, pulseHarmonic * 0.7) * uGlow;
+
+          // Bioluminescent golden sap with cyan capillary edges
+          vec3 goldSap = vec3(1.0, 0.82, 0.35) * 2.4;
+          vec3 cyanGlow = vec3(0.2, 0.9, 1.0) * 1.6;
+          vec3 sapColor = mix(cyanGlow, goldSap, smoothstep(0.1, 0.6, pulsePrimary));
+
+          // Obsidian surface sheen & rim Fresnel
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+
+          vec3 finalColor = mix(bark, sapColor, combinedVein * 0.92) + vec3(0.15, 0.22, 0.35) * fresnel * 0.5;
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `});this.disposables.push(t);let n=new X(e,t);this.group.add(n);for(let e=0;e<10;e++){let n=e*Math.PI*2/10,r=24+e%3*6,i=12+Math.sin(e*1.5)*8,a=Math.cos(n)*r,o=Math.sin(n)*r,s=a*.5+Math.sin(e)*4,c=16+Math.cos(e)*3,l=o*.5+Math.cos(e)*4,u=new Ga(new Mi([new K(0,14,0),new K(s,c,l),new K(a,i,o)]),20,1.4,8,!1);this.disposables.push(u);let d=new X(u,t);this.group.add(d),this.branchEndpoints.push(new K(a,i,o));for(let e=0;e<2;e++){let e=a+(Math.random()-.5)*12,t=i+(Math.random()-.5)*8,n=o+(Math.random()-.5)*12;this.branchEndpoints.push(new K(e,t,n))}}}update(e,t,n){let r=e%this.duration,i=$(5,15,r)*(1-$(40,48,r));this.sapUniforms.uGlow.value=i,this.sapUniforms.uTime.value=r,this.moons.forEach((e,t)=>{e.mat.uniforms.uTime.value=r,e.mat.uniforms.uGlow.value=i;let n=bu(0,1,$(e.detachDelay,e.detachDelay+6,r)*(1-$(38,46,r)));if(n>.001){let t=e.baseAngle+(r-e.detachDelay)*e.speed*.4,i=Math.sin(t*3),a=e.petalRadius+i*14,o=Math.cos(t)*a,s=12+Math.sin(t*2)*e.heightRange,c=Math.sin(t)*a;e.mesh.position.lerpVectors(e.anchor,new K(o,s,c),n)}else e.mesh.position.copy(e.anchor)});let a=$(22,32,r)*(1-$(38,45,r));this.petalLines.forEach((e,t)=>{e.material.opacity=a*.75,e.rotation.y=r*.08+t*.1});let o=new K,s=new K(0,10,0);if(r<14){let e=r/14;o.set(Math.sin(e*1.5)*32,-8+e*18,Math.cos(e*1.5)*32),s.set(0,8,0)}else if(r<28){let e=(r-14)/14;o.set(Math.cos(e*2)*65,18+e*14,Math.sin(e*2)*65),s.set(0,14,0)}else if(r<40){let e=(r-28)/12;o.set(Math.sin(e*1.8+.8)*95,38+Math.sin(e*Math.PI)*12,Math.cos(e*1.8+.8)*95),s.set(0,12,0)}else{let e=(r-40)/10;o.set(Math.cos(2.8+e*.8)*(85-e*40),38-e*22,Math.sin(2.8+e*.8)*(85-e*40)),s.set(0,10,0)}this.camera.position.copy(o),this.camera.lookAt(s)}render(e){e.render(this.scene,this.camera)}resize(e,t){this.camera.aspect=e/t,this.camera.updateProjectionMatrix()}dispose(){this.scene.remove(this.group),this.disposables.forEach(e=>{e&&typeof e.dispose==`function`&&e.dispose()}),this.disposables=[]}},Du=class{constructor(){this.name=`The Hourglass of Kingdoms`,this.duration=50,this.group=new on,this.disposables=[]}init(e,t,n){this.camera=t,this.scene=n,n.background=new Y(262918),n.fog=new mn(262918,.004),t.fov=48,t.near=.5,t.far=1400,t.updateProjectionMatrix();let r=new Wo(2629656,1.2);this.group.add(r),this.topLight=new Uo(16768928,2.2),this.topLight.position.set(40,80,50),this.group.add(this.topLight),this.bottomLight=new Uo(14719040,1.8),this.bottomLight.position.set(-40,-80,-40),this.group.add(this.bottomLight),this.createHourglassFrame(),this.grainCount=1400,this.grains=[];let i=new vi(.7,.7,.7);this.disposables.push(i),this.grainUniforms={uTime:{value:0},uTransferProgress:{value:0}};let a=new eo({uniforms:this.grainUniforms,vertexShader:`

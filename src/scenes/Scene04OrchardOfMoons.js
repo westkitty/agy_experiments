@@ -287,7 +287,9 @@ export class Scene04OrchardOfMoons {
       vertexShader: `
         varying vec3 vNormal;
         varying vec3 vWorldPos;
+        varying vec2 vUv;
         void main() {
+          vUv = uv;
           vNormal = normalize(normalMatrix * normal);
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
           vWorldPos = worldPos.xyz;
@@ -295,18 +297,36 @@ export class Scene04OrchardOfMoons {
         }
       `,
       fragmentShader: `
+        ${GLSL_NOISE}
         uniform float uTime;
         uniform float uGlow;
         varying vec3 vNormal;
         varying vec3 vWorldPos;
+        varying vec2 vUv;
         void main() {
-          // Obsidian black bark
-          vec3 bark = vec3(0.04, 0.045, 0.06);
-          // Luminous golden sap veins rising upwards
-          float sapWave = sin(vWorldPos.y * 0.45 - uTime * 2.5);
-          float vein = smoothstep(0.7, 0.95, sapWave) * uGlow;
-          vec3 goldSap = vec3(1.0, 0.85, 0.4) * 2.2;
-          vec3 finalColor = mix(bark, goldSap, vein * 0.9);
+          // Obsidian bark with procedural woodgrain fissures
+          float barkFissure = snoise(vec3(vUv.x * 18.0, vUv.y * 4.0, 0.0));
+          vec3 bark = mix(vec3(0.03, 0.035, 0.05), vec3(0.08, 0.07, 0.09), barkFissure * 0.5 + 0.5);
+
+          // Longitudinal capillary pulse flowing along trunk and branches to tips
+          float branchFlow = vUv.y * 8.0 - uTime * 2.2;
+          float capillaryNoise = snoise(vec3(vUv.x * 24.0, branchFlow * 0.5, uTime * 0.3));
+
+          // Bidirectional harmonic pulse
+          float pulsePrimary = smoothstep(0.68, 0.96, sin(branchFlow + capillaryNoise * 1.5));
+          float pulseHarmonic = smoothstep(0.8, 0.98, sin(branchFlow * 1.618 - capillaryNoise));
+          float combinedVein = max(pulsePrimary, pulseHarmonic * 0.7) * uGlow;
+
+          // Bioluminescent golden sap with cyan capillary edges
+          vec3 goldSap = vec3(1.0, 0.82, 0.35) * 2.4;
+          vec3 cyanGlow = vec3(0.2, 0.9, 1.0) * 1.6;
+          vec3 sapColor = mix(cyanGlow, goldSap, smoothstep(0.1, 0.6, pulsePrimary));
+
+          // Obsidian surface sheen & rim Fresnel
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+
+          vec3 finalColor = mix(bark, sapColor, combinedVein * 0.92) + vec3(0.15, 0.22, 0.35) * fresnel * 0.5;
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `
