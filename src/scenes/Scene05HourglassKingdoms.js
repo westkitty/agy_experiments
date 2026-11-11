@@ -68,6 +68,7 @@ export class Scene05HourglassKingdoms {
 
         varying vec3 vWorldPos;
         varying float vIsGlow;
+        varying float vIsLower;
 
         void main() {
           // Individual grain progress based on transfer wave
@@ -89,12 +90,15 @@ export class Scene05HourglassKingdoms {
 
             currentPos = vec3(cos(angle) * r, height, sin(angle) * r);
             vIsGlow = 1.0;
+            vIsLower = 0.0;
           } else if (s >= 0.9999) {
             currentPos = aLowerPos;
             vIsGlow = 0.0;
+            vIsLower = 1.0;
           } else {
             currentPos = aUpperPos;
             vIsGlow = 0.0;
+            vIsLower = 0.0;
           }
 
           vec4 worldPos = modelMatrix * vec4(currentPos + pos, 1.0);
@@ -106,6 +110,7 @@ export class Scene05HourglassKingdoms {
         uniform float uTime;
         varying vec3 vWorldPos;
         varying float vIsGlow;
+        varying float vIsLower;
 
         void main() {
           // Antique carved limestone / bronze architectural material with sculptural depth
@@ -122,6 +127,16 @@ export class Scene05HourglassKingdoms {
           vec3 baseStone = stoneColor * depthShade;
           vec3 col = mix(baseStone, glowColor * 2.2, vIsGlow);
           col += hotEmber * (neckHeat * 1.8);
+
+          // Holographic architectural blueprint construction vector grid on lower kingdom
+          float gridX = fract(vWorldPos.x * 0.9);
+          float gridZ = fract(vWorldPos.z * 0.9);
+          float gridY = fract(vWorldPos.y * 0.9);
+          float blueprintGrid = (step(0.85, gridX) + step(0.85, gridZ) + step(0.85, gridY)) * vIsLower;
+          float buildScan = exp(-pow(vWorldPos.y + 22.0 - sin(uTime * 1.5) * 12.0, 2.0) * 0.12) * vIsLower;
+          vec3 blueprintGold = vec3(1.2, 0.95, 0.45);
+          vec3 cyanLaser = vec3(0.2, 0.85, 1.0);
+          col += mix(blueprintGold, cyanLaser, 0.35) * (blueprintGrid * 0.45 + buildScan * 0.85);
 
           gl_FragColor = vec4(col, 1.0);
         }
@@ -277,8 +292,9 @@ export class Scene05HourglassKingdoms {
         void main() {
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
           float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.8);
-          vec3 glassHighlight = vec3(0.9, 0.95, 1.0) * (fresnel * 0.65 + 0.04);
-          gl_FragColor = vec4(glassHighlight, fresnel * 0.4 + 0.08);
+          float curvatureSheen = pow(abs(dot(normalize(vWorldPos.xz + vec2(0.0001)), normalize(viewDir.xz + vec2(0.0001)))), 6.0) * 0.35;
+          vec3 glassHighlight = vec3(0.9, 0.96, 1.0) * (fresnel * 0.75 + curvatureSheen + 0.05);
+          gl_FragColor = vec4(glassHighlight, fresnel * 0.45 + 0.08);
         }
       `
     });

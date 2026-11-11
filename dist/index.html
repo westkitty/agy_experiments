@@ -4954,6 +4954,7 @@ float hash21(vec2 p) {
 
         varying vec3 vWorldPos;
         varying float vIsGlow;
+        varying float vIsLower;
 
         void main() {
           // Individual grain progress based on transfer wave
@@ -4975,12 +4976,15 @@ float hash21(vec2 p) {
 
             currentPos = vec3(cos(angle) * r, height, sin(angle) * r);
             vIsGlow = 1.0;
+            vIsLower = 0.0;
           } else if (s >= 0.9999) {
             currentPos = aLowerPos;
             vIsGlow = 0.0;
+            vIsLower = 1.0;
           } else {
             currentPos = aUpperPos;
             vIsGlow = 0.0;
+            vIsLower = 0.0;
           }
 
           vec4 worldPos = modelMatrix * vec4(currentPos + pos, 1.0);
@@ -4991,6 +4995,7 @@ float hash21(vec2 p) {
         uniform float uTime;
         varying vec3 vWorldPos;
         varying float vIsGlow;
+        varying float vIsLower;
 
         void main() {
           // Antique carved limestone / bronze architectural material with sculptural depth
@@ -5007,6 +5012,16 @@ float hash21(vec2 p) {
           vec3 baseStone = stoneColor * depthShade;
           vec3 col = mix(baseStone, glowColor * 2.2, vIsGlow);
           col += hotEmber * (neckHeat * 1.8);
+
+          // Holographic architectural blueprint construction vector grid on lower kingdom
+          float gridX = fract(vWorldPos.x * 0.9);
+          float gridZ = fract(vWorldPos.z * 0.9);
+          float gridY = fract(vWorldPos.y * 0.9);
+          float blueprintGrid = (step(0.85, gridX) + step(0.85, gridZ) + step(0.85, gridY)) * vIsLower;
+          float buildScan = exp(-pow(vWorldPos.y + 22.0 - sin(uTime * 1.5) * 12.0, 2.0) * 0.12) * vIsLower;
+          vec3 blueprintGold = vec3(1.2, 0.95, 0.45);
+          vec3 cyanLaser = vec3(0.2, 0.85, 1.0);
+          col += mix(blueprintGold, cyanLaser, 0.35) * (blueprintGrid * 0.45 + buildScan * 0.85);
 
           gl_FragColor = vec4(col, 1.0);
         }
@@ -5025,8 +5040,9 @@ float hash21(vec2 p) {
         void main() {
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
           float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 2.8);
-          vec3 glassHighlight = vec3(0.9, 0.95, 1.0) * (fresnel * 0.65 + 0.04);
-          gl_FragColor = vec4(glassHighlight, fresnel * 0.4 + 0.08);
+          float curvatureSheen = pow(abs(dot(normalize(vWorldPos.xz + vec2(0.0001)), normalize(viewDir.xz + vec2(0.0001)))), 6.0) * 0.35;
+          vec3 glassHighlight = vec3(0.9, 0.96, 1.0) * (fresnel * 0.75 + curvatureSheen + 0.05);
+          gl_FragColor = vec4(glassHighlight, fresnel * 0.45 + 0.08);
         }
       `});this.disposables.push(f),this.glassMesh=new X(d,f),this.group.add(this.glassMesh)}update(e,t,n){let r=e%this.duration,i=0;i=r<8?0:r<26?bu(0,1,(r-8)/18):r<38?1:1-bu(0,1,(r-38)/10),this.grainUniforms.uTime.value=r,this.grainUniforms.uTransferProgress.value=i,this.astrolabeInner&&this.astrolabeOuter&&(this.astrolabeInner.rotation.z+=t*.45,this.astrolabeInner.rotation.y=Math.sin(r*.4)*.22,this.astrolabeOuter.rotation.z-=t*.28,this.astrolabeOuter.rotation.x=Math.PI/2+Math.cos(r*.35)*.18);let a=new K,o=new K(0,20,0);if(r<12){let e=r/12;a.set(Math.cos(e*1.5)*58,28+e*4,Math.sin(e*1.5)*58),o.set(0,20,0)}else if(r<26){let e=(r-12)/14,t=Ou(26,-10,e);a.set(Math.sin(e*2.2+.4)*(42-Math.sin(e*Math.PI)*14),t+6,Math.cos(e*2.2+.4)*(42-Math.sin(e*Math.PI)*14)),o.set(0,t,0)}else if(r<38){let e=(r-26)/12;a.set(Math.cos(e*2)*54,-22+Math.sin(e*Math.PI)*6,Math.sin(e*2)*54),o.set(0,-22,0)}else{let e=(r-38)/12,t=Ou(-20,28,e);a.set(Math.sin(2.4+e*1.2)*(50+e*8),t,Math.cos(2.4+e*1.2)*(50+e*8)),o.set(0,t*.6,0)}this.camera.position.copy(a),this.camera.lookAt(o)}render(e){e.render(this.scene,this.camera)}resize(e,t){this.camera.aspect=e/t,this.camera.updateProjectionMatrix()}dispose(){this.scene.remove(this.group),this.disposables.forEach(e=>{e&&typeof e.dispose==`function`&&e.dispose()}),this.disposables=[]}};function Ou(e,t,n){return e+(t-e)*n}var ku=class{constructor(){this.name=`The Walking Shadow`,this.duration=50,this.group=new on,this.disposables=[]}init(e,t,n){this.camera=t,this.scene=n,n.background=new Y(3285012),n.fog=new mn(3285012,.0035),t.fov=48,t.near=.5,t.far=1600,t.updateProjectionMatrix(),this.sunLight=new Uo(16772829,2.8),this.sunPos=new K(0,32,-220),this.sunLight.position.copy(this.sunPos),this.group.add(this.sunLight),this.ambLight=new Wo(4862500,1.2),this.group.add(this.ambLight);let r=new Va(600,600,80,80);r.rotateX(-Math.PI/2),this.disposables.push(r),this.terrainMat=new eo({uniforms:{uSunIntensity:{value:1},uShadowDist:{value:0}},vertexShader:`
         ${xu}
