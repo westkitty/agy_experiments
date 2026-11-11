@@ -360,7 +360,79 @@ export class Scene09EmberRailway {
     this.rightRod.position.set(2.45, 1.4, 1.1);
     this.trainGroup.add(this.rightRod);
 
+    // Heavy Steel Cowcatcher Pilot Wedge
+    const cowcatcherGeo = new THREE.ConeGeometry(2.4, 2.2, 4);
+    cowcatcherGeo.rotateX(Math.PI / 2);
+    cowcatcherGeo.rotateY(Math.PI / 4);
+    this.disposables.push(cowcatcherGeo);
+    const cowcatcher = new THREE.Mesh(cowcatcherGeo, ironMat);
+    cowcatcher.position.set(0, 0.8, 5.4);
+    cowcatcher.scale.set(1.0, 0.6, 1.2);
+    this.trainGroup.add(cowcatcher);
+
+    // Kinetic Wheel Flange Sparks
+    this.createWheelSparks();
+
     this.group.add(this.trainGroup);
+  }
+
+  createWheelSparks() {
+    this.wheelSparkCount = 350;
+    const sparkPos = new Float32Array(this.wheelSparkCount * 3);
+    const sparkVels = new Float32Array(this.wheelSparkCount * 3);
+    const sparkLifes = new Float32Array(this.wheelSparkCount);
+
+    for (let i = 0; i < this.wheelSparkCount; i++) {
+      sparkLifes[i] = Math.random();
+      const side = (i % 2 === 0) ? -2.1 : 2.1;
+      sparkPos[i * 3 + 0] = side;
+      sparkPos[i * 3 + 1] = 0.2;
+      sparkPos[i * 3 + 2] = 4.2;
+
+      sparkVels[i * 3 + 0] = (side > 0 ? 1 : -1) * (2.0 + Math.random() * 4.0);
+      sparkVels[i * 3 + 1] = 1.2 + Math.random() * 3.2;
+      sparkVels[i * 3 + 2] = -12.0 - Math.random() * 14.0;
+    }
+
+    const sparkGeo = new THREE.BufferGeometry();
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+    sparkGeo.setAttribute('aLife', new THREE.BufferAttribute(sparkLifes, 1));
+    this.disposables.push(sparkGeo);
+    this.wheelSparkGeo = sparkGeo;
+    this.wheelSparkVels = sparkVels;
+    this.wheelSparkPos = sparkPos;
+    this.wheelSparkLifes = sparkLifes;
+
+    const sparkMat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: `
+        attribute float aLife;
+        varying float vLife;
+        void main() {
+          vLife = aLife;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = (1.0 - aLife) * 18.0 * (35.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying float vLife;
+        void main() {
+          vec2 coord = gl_PointCoord - vec2(0.5);
+          if (length(coord) > 0.5) discard;
+          vec3 whiteHot = vec3(1.5, 1.4, 1.1);
+          vec3 orangeHot = vec3(1.3, 0.55, 0.08);
+          vec3 col = mix(whiteHot, orangeHot, vLife);
+          gl_FragColor = vec4(col, (1.0 - vLife) * 0.95);
+        }
+      `
+    });
+    this.disposables.push(sparkMat);
+
+    this.wheelSparkMesh = new THREE.Points(sparkGeo, sparkMat);
+    this.trainGroup.add(this.wheelSparkMesh);
   }
 
   createSteamParticles() {
@@ -594,6 +666,34 @@ export class Scene09EmberRailway {
       this.emberParticles.geometry.attributes.color.needsUpdate = true;
     }
 
+    // Kinetic Wheel Flange Sparks Update
+    if (this.wheelSparkGeo && this.wheelSparkPos) {
+      const pos = this.wheelSparkPos;
+      const vels = this.wheelSparkVels;
+      const lifes = this.wheelSparkLifes;
+      for (let i = 0; i < this.wheelSparkCount; i++) {
+        lifes[i] += deltaTime * (2.8 + (i % 6) * 0.4);
+        if (lifes[i] >= 1.0) {
+          lifes[i] = 0.0;
+          const side = (i % 2 === 0) ? -2.1 : 2.1;
+          pos[i * 3 + 0] = side + (Math.random() - 0.5) * 0.15;
+          pos[i * 3 + 1] = 0.2 + Math.random() * 0.25;
+          pos[i * 3 + 2] = 4.2 + (Math.random() - 0.5) * 0.4;
+
+          vels[i * 3 + 0] = (side > 0 ? 1 : -1) * (2.2 + Math.random() * 4.2);
+          vels[i * 3 + 1] = 1.4 + Math.random() * 3.5;
+          vels[i * 3 + 2] = -12.0 - Math.random() * 15.0;
+        } else {
+          pos[i * 3 + 0] += vels[i * 3 + 0] * deltaTime;
+          pos[i * 3 + 1] += vels[i * 3 + 1] * deltaTime - 12.0 * deltaTime * deltaTime * 0.5;
+          vels[i * 3 + 1] -= 12.0 * deltaTime;
+          pos[i * 3 + 2] += vels[i * 3 + 2] * deltaTime;
+        }
+      }
+      this.wheelSparkGeo.attributes.position.needsUpdate = true;
+      this.wheelSparkGeo.attributes.aLife.needsUpdate = true;
+    }
+
     // Cinematic Camera Tracking
     let camPos = new THREE.Vector3();
     let lookTarget = trainPos.clone().add(new THREE.Vector3(0, 3, 0));
@@ -605,11 +705,11 @@ export class Scene09EmberRailway {
       camPos.copy(trainPos).add(sideOffset);
       lookTarget.copy(trainPos).add(new THREE.Vector3(0, 2, 6));
     } else if (t < 25) {
-      // Panning forward to the cowcatcher as track forges from sparks
+      // Panning forward to frame cowcatcher and wheel sparks
       const p = (t - 15) / 10;
-      const frontOffset = new THREE.Vector3(8, 4, 18).applyQuaternion(this.trainGroup.quaternion);
+      const frontOffset = new THREE.Vector3(10.0 - p * 4.0, 3.5, 14.0).applyQuaternion(this.trainGroup.quaternion);
       camPos.copy(trainPos).add(frontOffset);
-      lookTarget.copy(trainPos).add(trainTangent.clone().multiplyScalar(15));
+      lookTarget.copy(trainPos).add(new THREE.Vector3(0, 2.2, 1.5));
     } else if (t < 38) {
       // Climax: Tracking the train through the vertical loop (upside-down against the stars)
       const p = (t - 25) / 13;
