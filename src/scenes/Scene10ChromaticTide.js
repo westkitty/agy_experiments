@@ -218,6 +218,19 @@ export class Scene10ChromaticTide {
           // Foaming wave crest
           finalColor += vec3(1.2, 1.15, 0.95) * vCrest;
 
+          // Prismatic Capillary Meniscus Climbing Skyscraper Base Foundations
+          if (vWorldPos.y < 5.2) {
+            float waterLevel = 0.6 + sin(vWorldPos.x * 0.6 + vWorldPos.z * 0.6 + uTime * 3.5) * 0.3;
+            float meniscusDist = max(0.0, vWorldPos.y - waterLevel);
+            float meniscusClimb = exp(-meniscusDist * 0.85) * vChromaticFactor;
+
+            // Iridescent capillary liquid luster and high-specular wetting sheen
+            vec3 capillaryCol = mix(vec3(0.04, 0.88, 0.95), vec3(1.2, 0.3, 0.8), sin(vWorldPos.x * 0.3 + uTime * 1.8) * 0.5 + 0.5);
+            vec3 lightDir = normalize(vec3(0.5, 0.8, 0.3));
+            float wetSheen = pow(max(dot(viewDir, reflect(-lightDir, vNormal)), 0.0), 22.0) * 2.6;
+            finalColor = mix(finalColor, capillaryCol + vec3(1.2) * wetSheen, meniscusClimb * 0.8);
+          }
+
           // Distance fog
           float d = length(vWorldPos.xz);
           float fog = 1.0 - exp(-d * 0.0035);
