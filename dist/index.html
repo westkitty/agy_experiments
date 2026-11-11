@@ -4375,13 +4375,14 @@ float hash21(vec2 p) {
           vec3 discColor = mix(vec3(1.0, 0.85, 0.4), blueBoost + redShift, 0.45);
           gl_FragColor = vec4(discColor * boost * 1.5, 0.7);
         }
-      `});this.massRingMat=s,this.disposables.push(s);for(let e=0;e<3;e++){let t=new sn,n=new Y(i,a),r=new Y(o,s);t.add(n),t.add(r),this.group.add(t),this.celestialMasses.push({group:t,mesh:n,ring:r,baseAngle:e*Math.PI*2/3,radius:35+e*15,speed:.35+e*.1,pos:new G})}let c=new Ha(360,360,140,140);c.rotateX(-Math.PI/2),this.disposables.push(c),this.membraneUniforms={uTime:{value:0},uMass1:{value:new G},uMass2:{value:new G},uMass3:{value:new G},uSplitAmount:{value:0},uClimaxFactor:{value:0}};let l=new X({uniforms:this.membraneUniforms,wireframe:!1,transparent:!0,side:2,vertexShader:`
+      `});this.massRingMat=s,this.disposables.push(s);for(let e=0;e<3;e++){let t=new sn,n=new Y(i,a),r=new Y(o,s);t.add(n),t.add(r),this.group.add(t),this.celestialMasses.push({group:t,mesh:n,ring:r,baseAngle:e*Math.PI*2/3,radius:35+e*15,speed:.35+e*.1,pos:new G})}let c=new Ha(360,360,140,140);c.rotateX(-Math.PI/2),this.disposables.push(c),this.membraneUniforms={uTime:{value:0},uMass1:{value:new G},uMass2:{value:new G},uMass3:{value:new G},uSplitAmount:{value:0},uClosureShock:{value:0},uClimaxFactor:{value:0}};let l=new X({uniforms:this.membraneUniforms,wireframe:!1,transparent:!0,side:2,vertexShader:`
         ${xu}
         uniform float uTime;
         uniform vec3 uMass1;
         uniform vec3 uMass2;
         uniform vec3 uMass3;
         uniform float uSplitAmount;
+        uniform float uClosureShock;
         uniform float uClimaxFactor;
 
         varying vec2 vUv;
@@ -4442,6 +4443,13 @@ float hash21(vec2 p) {
           float microWaves = snoise(vec3(p.x * 0.02, p.z * 0.02, uTime * 0.35)) * 4.5;
           p.y += totalWell + microWaves;
 
+          // Harmonic gravitational shock ripples propagating outward upon seam closure
+          if (uClosureShock > 0.001) {
+            float waveDist = abs(distToSeam);
+            float shockWave = sin(waveDist * 0.35 - uTime * 6.5) * exp(-waveDist * 0.035) * uClosureShock * 5.0;
+            p.y += shockWave;
+          }
+
           vDeformation = abs(totalWell) * 0.035;
 
           vec4 worldPos = modelMatrix * vec4(p, 1.0);
@@ -4451,6 +4459,7 @@ float hash21(vec2 p) {
       `,fragmentShader:`
         uniform float uTime;
         uniform float uSplitAmount;
+        uniform float uClosureShock;
         varying vec2 vUv;
         varying vec3 vWorldPos;
         varying float vDeformation;
@@ -4490,6 +4499,14 @@ float hash21(vec2 p) {
           vec3 arcColor = vec3(0.5, 0.9, 1.2); // Intense cyan-electric discharge
 
           color += vec3(1.0, 0.95, 0.7) * lipGlow + arcColor * arc;
+
+          // Gravitational wave harmonic glints on the weave upon seam closure
+          if (uClosureShock > 0.001) {
+            float waveDist = abs(vDistToSeam);
+            float ripplePhase = sin(waveDist * 0.35 - uTime * 6.5);
+            float rippleGlint = pow(max(ripplePhase, 0.0), 3.0) * exp(-waveDist * 0.035) * uClosureShock;
+            color += vec3(0.4, 0.85, 1.0) * (rippleGlint * 1.8);
+          }
 
           // Rim lighting
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
@@ -4537,7 +4554,7 @@ float hash21(vec2 p) {
           float edgeFade = 1.0 - smoothstep(100.0, 170.0, length(vWorldPos.xz));
           gl_FragColor = vec4(col, edgeFade * 0.9);
         }
-      `});this.disposables.push(d),this.subLoomMesh=new Y(u,d),this.group.add(this.subLoomMesh);let f=1500,p=new Float32Array(f*3);for(let e=0;e<f;e++)p[e*3+0]=(Math.random()-.5)*800,p[e*3+1]=(Math.random()-.5)*400-50,p[e*3+2]=(Math.random()-.5)*800;let m=new ur;m.setAttribute(`position`,new Yn(p,3)),this.disposables.push(m);let h=new ci({color:13938487,size:1.8,transparent:!0,opacity:.65});this.disposables.push(h),this.stars=new pi(m,h),this.group.add(this.stars),n.add(this.group)}update(e,t,n){let r=e%this.duration;this.celestialMasses.forEach((e,t)=>{let n=e.baseAngle+r*e.speed*.25,i=e.radius+Math.sin(r*.4+t)*8,a=Math.cos(n)*i,o=Math.sin(n)*i,s=8-$(12,28,r)*(1-$(36,46,r))*14+Math.sin(r*.8+t)*2;e.pos.set(a,s,o),e.group.position.copy(e.pos),e.ring&&(e.ring.rotation.z=r*(1.2+t*.4))}),this.membraneUniforms.uTime.value=r,this.membraneUniforms.uMass1.value.copy(this.celestialMasses[0].pos),this.membraneUniforms.uMass2.value.copy(this.celestialMasses[1].pos),this.membraneUniforms.uMass3.value.copy(this.celestialMasses[2].pos),this.massMat&&(this.massMat.uniforms.uTime.value=r),this.massRingMat&&(this.massRingMat.uniforms.uTime.value=r);let i=$(25,34,r)*(1-$(39,47,r));this.membraneUniforms.uSplitAmount.value=bu(0,1,i);let a=new G,o=new G(0,-6,0);if(r<15){let e=r/15;a.set(Math.cos(e*.6+.3)*110,45-e*15,Math.sin(e*.6+.3)*110),o.set(0,-5,0)}else if(r<28){let e=(r-15)/13;a.set(Math.cos(1.2+e*1.1)*(80-e*30),25-Math.sin(e*Math.PI)*16,Math.sin(1.2+e*1.1)*(80-e*30)),o.copy(this.celestialMasses[0].pos)}else if(r<40){let e=(r-28)/12;a.set(Math.sin(e*1.4)*15,22-e*8,-50+e*100),o.set(0,-18,-20+e*80)}else{let e=(r-40)/10;a.set(Math.cos(2.8+e*.8)*(50+e*60),14+e*31,Math.sin(2.8+e*.8)*(50+e*60)),o.set(0,-4,0)}this.camera.position.copy(a),this.camera.lookAt(o)}render(e){e.render(this.scene,this.camera)}resize(e,t){this.camera.aspect=e/t,this.camera.updateProjectionMatrix()}dispose(){this.scene.remove(this.group),this.disposables.forEach(e=>{e&&typeof e.dispose==`function`&&e.dispose()}),this.disposables=[]}},Cu=class{constructor(){this.name=`The Mirror Migration`,this.duration=50,this.group=new sn,this.disposables=[]}init(e,t,n){this.camera=t,this.scene=n,n.background=new J(790552),n.fog=new hn(790552,.004),t.fov=48,t.near=.5,t.far=1600,t.updateProjectionMatrix();let r=new Wo(2107448,1);this.group.add(r),this.sunLight=new Uo(16772829,1.8),this.sunLight.position.set(0,8,-300),this.group.add(this.sunLight);let i=new Wa(900,32,16);this.disposables.push(i);let a=new X({side:1,vertexShader:`
+      `});this.disposables.push(d),this.subLoomMesh=new Y(u,d),this.group.add(this.subLoomMesh);let f=1500,p=new Float32Array(f*3);for(let e=0;e<f;e++)p[e*3+0]=(Math.random()-.5)*800,p[e*3+1]=(Math.random()-.5)*400-50,p[e*3+2]=(Math.random()-.5)*800;let m=new ur;m.setAttribute(`position`,new Yn(p,3)),this.disposables.push(m);let h=new ci({color:13938487,size:1.8,transparent:!0,opacity:.65});this.disposables.push(h),this.stars=new pi(m,h),this.group.add(this.stars),n.add(this.group)}update(e,t,n){let r=e%this.duration;this.celestialMasses.forEach((e,t)=>{let n=e.baseAngle+r*e.speed*.25,i=e.radius+Math.sin(r*.4+t)*8,a=Math.cos(n)*i,o=Math.sin(n)*i,s=8-$(12,28,r)*(1-$(36,46,r))*14+Math.sin(r*.8+t)*2;e.pos.set(a,s,o),e.group.position.copy(e.pos),e.ring&&(e.ring.rotation.z=r*(1.2+t*.4))}),this.membraneUniforms.uTime.value=r,this.membraneUniforms.uMass1.value.copy(this.celestialMasses[0].pos),this.membraneUniforms.uMass2.value.copy(this.celestialMasses[1].pos),this.membraneUniforms.uMass3.value.copy(this.celestialMasses[2].pos),this.massMat&&(this.massMat.uniforms.uTime.value=r),this.massRingMat&&(this.massRingMat.uniforms.uTime.value=r);let i=$(25,34,r)*(1-$(39,47,r));this.membraneUniforms.uSplitAmount.value=bu(0,1,i);let a=$(43,46,r)*(1-$(46,50,r));this.membraneUniforms.uClosureShock.value=a;let o=new G,s=new G(0,-6,0);if(r<15){let e=r/15;o.set(Math.cos(e*.6+.3)*110,45-e*15,Math.sin(e*.6+.3)*110),s.set(0,-5,0)}else if(r<28){let e=(r-15)/13;o.set(Math.cos(1.2+e*1.1)*(80-e*30),25-Math.sin(e*Math.PI)*16,Math.sin(1.2+e*1.1)*(80-e*30)),s.copy(this.celestialMasses[0].pos)}else if(r<40){let e=(r-28)/12;o.set(Math.sin(e*1.4)*15,22-e*8,-50+e*100),s.set(0,-18,-20+e*80)}else{let e=(r-40)/10;o.set(Math.cos(2.8+e*.8)*(50+e*60),14+e*31,Math.sin(2.8+e*.8)*(50+e*60)),s.set(0,-4,0)}this.camera.position.copy(o),this.camera.lookAt(s)}render(e){e.render(this.scene,this.camera)}resize(e,t){this.camera.aspect=e/t,this.camera.updateProjectionMatrix()}dispose(){this.scene.remove(this.group),this.disposables.forEach(e=>{e&&typeof e.dispose==`function`&&e.dispose()}),this.disposables=[]}},Cu=class{constructor(){this.name=`The Mirror Migration`,this.duration=50,this.group=new sn,this.disposables=[]}init(e,t,n){this.camera=t,this.scene=n,n.background=new J(790552),n.fog=new hn(790552,.004),t.fov=48,t.near=.5,t.far=1600,t.updateProjectionMatrix();let r=new Wo(2107448,1);this.group.add(r),this.sunLight=new Uo(16772829,1.8),this.sunLight.position.set(0,8,-300),this.group.add(this.sunLight);let i=new Wa(900,32,16);this.disposables.push(i);let a=new X({side:1,vertexShader:`
         varying vec3 vWorldPos;
         void main() {
           vec4 worldPos = modelMatrix * vec4(position, 1.0);

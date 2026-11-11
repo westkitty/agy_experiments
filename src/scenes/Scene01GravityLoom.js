@@ -158,6 +158,7 @@ export class Scene01GravityLoom {
       uMass2: { value: new THREE.Vector3() },
       uMass3: { value: new THREE.Vector3() },
       uSplitAmount: { value: 0 },
+      uClosureShock: { value: 0 },
       uClimaxFactor: { value: 0 }
     };
 
@@ -173,6 +174,7 @@ export class Scene01GravityLoom {
         uniform vec3 uMass2;
         uniform vec3 uMass3;
         uniform float uSplitAmount;
+        uniform float uClosureShock;
         uniform float uClimaxFactor;
 
         varying vec2 vUv;
@@ -233,6 +235,13 @@ export class Scene01GravityLoom {
           float microWaves = snoise(vec3(p.x * 0.02, p.z * 0.02, uTime * 0.35)) * 4.5;
           p.y += totalWell + microWaves;
 
+          // Harmonic gravitational shock ripples propagating outward upon seam closure
+          if (uClosureShock > 0.001) {
+            float waveDist = abs(distToSeam);
+            float shockWave = sin(waveDist * 0.35 - uTime * 6.5) * exp(-waveDist * 0.035) * uClosureShock * 5.0;
+            p.y += shockWave;
+          }
+
           vDeformation = abs(totalWell) * 0.035;
 
           vec4 worldPos = modelMatrix * vec4(p, 1.0);
@@ -243,6 +252,7 @@ export class Scene01GravityLoom {
       fragmentShader: `
         uniform float uTime;
         uniform float uSplitAmount;
+        uniform float uClosureShock;
         varying vec2 vUv;
         varying vec3 vWorldPos;
         varying float vDeformation;
@@ -282,6 +292,14 @@ export class Scene01GravityLoom {
           vec3 arcColor = vec3(0.5, 0.9, 1.2); // Intense cyan-electric discharge
 
           color += vec3(1.0, 0.95, 0.7) * lipGlow + arcColor * arc;
+
+          // Gravitational wave harmonic glints on the weave upon seam closure
+          if (uClosureShock > 0.001) {
+            float waveDist = abs(vDistToSeam);
+            float ripplePhase = sin(waveDist * 0.35 - uTime * 6.5);
+            float rippleGlint = pow(max(ripplePhase, 0.0), 3.0) * exp(-waveDist * 0.035) * uClosureShock;
+            color += vec3(0.4, 0.85, 1.0) * (rippleGlint * 1.8);
+          }
 
           // Rim lighting
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
@@ -410,6 +428,10 @@ export class Scene01GravityLoom {
     // Climax: membrane splits along the seam (peaks around t = 30-40, closes by t = 46)
     const splitProgress = smoothstep(25, 34, t) * (1.0 - smoothstep(39, 47, t));
     this.membraneUniforms.uSplitAmount.value = smootherstep(0, 1, splitProgress);
+
+    // Seam closure shockwave impulse radiating across cosmic weave as tear seals
+    const closureShock = smoothstep(43, 46, t) * (1.0 - smoothstep(46, 50, t));
+    this.membraneUniforms.uClosureShock.value = closureShock;
 
     // Cinematic Camera Choreography
     // Phase 1 (0-15s): Wide establishing flyover
