@@ -102,8 +102,10 @@ export class Scene09EmberRailway {
       vertexShader: `
         attribute float aCurveU;
         uniform float uTrainU;
+        uniform float uTime;
         varying float vState; // 0 = not built, 1 = forming sparks, 2 = solid, 3 = embers
         varying vec3 vWorldPos;
+        varying float vDistort;
 
         void main() {
           // Distance along curve relative to train
@@ -115,14 +117,21 @@ export class Scene09EmberRailway {
           // Under train: -0.05 to +0.01 (solid track)
           // Behind train: -0.12 to -0.05 (ember disintegration wave)
           vec3 pos = position;
+          float distort = 0.0;
 
           if (diff > 0.15 || diff < -0.15) {
             // Invisible / outside active window
             pos *= 0.0;
             vState = 0.0;
           } else if (diff > 0.02) {
-            // Assembling sparks
+            // Assembling sparks with relativistic spacetime distortion wave
             vState = 1.0;
+            // High-frequency magnetic tension wave preceding the locomotive
+            float waveEnv = exp(-abs(diff - 0.045) * 55.0);
+            distort = sin((diff - 0.02) * 140.0 - uTime * 18.0) * waveEnv;
+            pos.y += distort * 1.5;
+            pos.x += cos((diff - 0.02) * 110.0 - uTime * 14.0) * waveEnv * 1.1;
+            pos *= (1.0 + waveEnv * 0.4);
           } else if (diff > -0.06) {
             // Solid supporting track
             vState = 2.0;
@@ -132,6 +141,7 @@ export class Scene09EmberRailway {
             vState = 3.0;
           }
 
+          vDistort = distort;
           vec4 worldPos = modelMatrix * vec4(pos, 1.0);
           vWorldPos = worldPos.xyz;
           gl_Position = projectionMatrix * viewMatrix * worldPos;
@@ -141,14 +151,17 @@ export class Scene09EmberRailway {
         uniform float uTime;
         varying float vState;
         varying vec3 vWorldPos;
+        varying float vDistort;
 
         void main() {
           if (vState < 0.5) discard;
 
           vec3 col = vec3(0.0);
           if (vState < 1.5) {
-            // Glowing white-gold assembly sparks
-            col = vec3(1.2, 0.95, 0.5) * 2.0;
+            // Glowing white-gold assembly sparks with relativistic distortion glow
+            col = vec3(1.2, 0.95, 0.5) * (2.2 + abs(vDistort) * 4.0);
+            // Violet-blue relativistic Doppler shift pulse on crest of incoming wave
+            col += vec3(0.35, 0.55, 1.35) * max(0.0, vDistort * 2.5);
           } else if (vState < 2.5) {
             // Solid dark steel rail
             col = vec3(0.35, 0.32, 0.3);
@@ -705,11 +718,16 @@ export class Scene09EmberRailway {
       camPos.copy(trainPos).add(sideOffset);
       lookTarget.copy(trainPos).add(new THREE.Vector3(0, 2, 6));
     } else if (t < 25) {
-      // Panning forward to frame cowcatcher and wheel sparks
+      // Dynamic three-quarter tracking shot framing locomotive climbing into loop, sparks & track wave
       const p = (t - 15) / 10;
-      const frontOffset = new THREE.Vector3(10.0 - p * 4.0, 3.5, 14.0).applyQuaternion(this.trainGroup.quaternion);
-      camPos.copy(trainPos).add(frontOffset);
-      lookTarget.copy(trainPos).add(new THREE.Vector3(0, 2.2, 1.5));
+      const sideOffset = new THREE.Vector3(
+        24.0 - p * 6.0,
+        12.0 + p * 6.0,
+        16.0 - p * 4.0
+      ).applyQuaternion(this.trainGroup.quaternion);
+      camPos.copy(trainPos).add(sideOffset);
+      const localTarget = new THREE.Vector3(0, 1.5, 6.0).applyQuaternion(this.trainGroup.quaternion);
+      lookTarget.copy(trainPos).add(localTarget);
     } else if (t < 38) {
       // Climax: Tracking the train through the vertical loop (upside-down against the stars)
       const p = (t - 25) / 13;
