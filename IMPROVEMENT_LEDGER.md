@@ -29,4 +29,5 @@
 | Iteration | Category | Discovery / Observation | Changes Implemented | Verification & Performance | Commit SHA |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Bootstrap** | Infrastructure | Empty remote repository; local working tree complete | Initial import of ten-experiment application, test harness, single-file bundler, and Pages deployment workflow | Verified build, test runner passes 10/10 scenes | `d15d20f` |
-| **01** | Visual Fidelity / Shading | Uniform filament thickness & purely vertical displacement | Added multi-frequency (90x/270x) anisotropic filament weave and 2D tangential gravitational vortex swirl | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter1.png` | `8800df1` |
+| **01** | Visual Fidelity / Shading | Uniform filament thickness & purely vertical displacement | Added multi-frequency (90x/270x) anisotropic filament weave and 2D tangential gravitational vortex swirl | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter1.png` | `b07e178` |
+| **02** | Visual Fidelity / Simulation | Static shallow water without mirror interaction | Added dual-frequency water caustics and radial mirror emergence wake waves in shallow salt water | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter2.png` | `9f244af` |

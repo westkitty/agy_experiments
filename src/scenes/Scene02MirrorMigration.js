@@ -100,22 +100,27 @@ export class Scene02MirrorMigration {
           // Shallow water specular reflection
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
           vec3 norm = vec3(0.0, 1.0, 0.0);
-          // Subtle water ripples
-          norm.x += sin(vWorldPos.x * 0.4 + uTime * 1.5) * 0.015;
-          norm.z += cos(vWorldPos.z * 0.4 + uTime * 1.5) * 0.015;
+          // Dual-frequency water ripples and emergence wake waves
+          norm.x += sin(vWorldPos.x * 0.45 + uTime * 1.8) * 0.02 + sin(vWorldPos.z * 0.8 - uTime * 1.2) * 0.01;
+          norm.z += cos(vWorldPos.z * 0.45 + uTime * 1.8) * 0.02 + cos(vWorldPos.x * 0.8 + uTime * 1.2) * 0.01;
+          float distCenter = length(vWorldPos.xz);
+          float wake = sin(distCenter * 0.15 - uTime * 2.2) * exp(-distCenter * 0.018) * 0.025;
+          norm.x += wake * (vWorldPos.x / (distCenter + 0.1));
+          norm.z += wake * (vWorldPos.z / (distCenter + 0.1));
           norm = normalize(norm);
 
           float fresnel = pow(1.0 - max(dot(viewDir, norm), 0.0), 3.0);
           vec3 skyReflect = mix(vec3(0.1, 0.15, 0.25), vec3(0.9, 0.8, 0.65), fresnel);
 
-          // Caustics & reflected light patches from mirrors
-          float caustics = sin(vWorldPos.x * 0.08 + uTime) * cos(vWorldPos.z * 0.08 - uTime * 0.8);
-          caustics = pow(max(caustics, 0.0), 4.0) * 1.5;
+          // Moving refractive caustic light networks on salt floor
+          float c1 = sin(vWorldPos.x * 0.35 + uTime * 2.2) * cos(vWorldPos.z * 0.35 - uTime * 1.9);
+          float c2 = sin((vWorldPos.x + vWorldPos.z) * 0.28 - uTime * 1.4);
+          float caustics = pow(max(c1 * 0.5 + c2 * 0.5 + 0.5, 0.0), 3.2) * 0.85;
 
           // Blinding golden glare during climax sun alignment
           vec3 sunReflect = vec3(1.0, 0.85, 0.4) * uSunAlign * max(dot(-viewDir, vec3(0.0, 0.0, -1.0)), 0.0) * 2.0;
 
-          vec3 finalColor = mix(saltBase * 0.4, skyReflect, 0.65 + fresnel * 0.35);
+          vec3 finalColor = mix(saltBase * 0.4 + vec3(caustics * 0.35), skyReflect, 0.65 + fresnel * 0.35);
           finalColor += vec3(1.0, 0.9, 0.7) * caustics * 0.4;
           finalColor += sunReflect;
 
