@@ -5367,11 +5367,17 @@ float hash21(vec2 p) {
           vec3 goldRing = vec3(1.0, 0.75, 0.35);
           vec3 violetFringe = vec3(0.85, 0.35, 0.65);
 
+          // Volumetric crepuscular god rays piercing through titan silhouette
+          float godRay1 = pow(max(sin(theta * 12.0 + uTime * 0.22), 0.0), 3.0) * exp(-r * 1.1);
+          float godRay2 = pow(max(sin(theta * 20.0 - uTime * 0.35), 0.0), 4.0) * exp(-r * 1.4);
+          float crepuscular = (godRay1 * 1.5 + godRay2 * 1.0) * smoothstep(0.28, 0.95, r);
+
           vec3 col = mix(goldRing, whiteCore, ring);
           col = mix(col, violetFringe, clamp(r - 0.5, 0.0, 1.0));
-          vec3 coronaCol = col * (ring * 3.2 + (rayMajor + rayMinor) * 2.2) * uEclipse;
+          float edgeFade = smoothstep(1.0, 0.75, r);
+          vec3 coronaCol = col * (ring * 3.2 + (rayMajor + rayMinor) * 2.2 + crepuscular * 2.4) * uEclipse * edgeFade;
 
-          gl_FragColor = vec4(coronaCol, clamp((ring * 2.0 + rayMajor + rayMinor) * uEclipse, 0.0, 1.0));
+          gl_FragColor = vec4(coronaCol, clamp((ring * 2.0 + rayMajor + rayMinor + crepuscular * 1.8) * uEclipse * edgeFade, 0.0, 1.0));
         }
       `}),this.disposables.push(this.coronaMat),this.coronaMesh=new Y(o,this.coronaMat),this.coronaMesh.position.copy(this.sunPos),this.group.add(this.coronaMesh),n.add(this.group)}createStatue(){this.statueGroup=new sn,this.statueGroup.position.set(0,0,50);let e=new ao({color:10388840,roughness:.92,metalness:.05});this.disposables.push(e);let t=new Si(18,5,18);this.disposables.push(t);let n=new Y(t,e);n.position.y=2.5,this.statueGroup.add(n);let r=new Si(10,16,7);this.disposables.push(r);let i=new Y(r,e);i.position.y=13,this.statueGroup.add(i);let a=new Si(5.5,7.5,6);this.disposables.push(a);let o=new Y(a,e);o.position.y=24.5,this.statueGroup.add(o);let s=new Si(3.5,14,3.5);this.disposables.push(s);let c=new Y(s,e);c.position.set(-6.8,12,0),this.statueGroup.add(c);let l=new Y(s,e);l.position.set(6.8,12,0),this.statueGroup.add(l),this.group.add(this.statueGroup)}createWalkingShadowTitan(){this.shadowTitan=new sn,this.shadowTitan.position.set(0,0,50),this.shadowMat=new X({uniforms:{uAbsorption:{value:1},uEclipse:{value:0},uSunIntensity:{value:1}},vertexShader:`
         varying vec3 vNormal;

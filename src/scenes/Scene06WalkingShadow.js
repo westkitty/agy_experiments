@@ -215,11 +215,17 @@ export class Scene06WalkingShadow {
           vec3 goldRing = vec3(1.0, 0.75, 0.35);
           vec3 violetFringe = vec3(0.85, 0.35, 0.65);
 
+          // Volumetric crepuscular god rays piercing through titan silhouette
+          float godRay1 = pow(max(sin(theta * 12.0 + uTime * 0.22), 0.0), 3.0) * exp(-r * 1.1);
+          float godRay2 = pow(max(sin(theta * 20.0 - uTime * 0.35), 0.0), 4.0) * exp(-r * 1.4);
+          float crepuscular = (godRay1 * 1.5 + godRay2 * 1.0) * smoothstep(0.28, 0.95, r);
+
           vec3 col = mix(goldRing, whiteCore, ring);
           col = mix(col, violetFringe, clamp(r - 0.5, 0.0, 1.0));
-          vec3 coronaCol = col * (ring * 3.2 + (rayMajor + rayMinor) * 2.2) * uEclipse;
+          float edgeFade = smoothstep(1.0, 0.75, r);
+          vec3 coronaCol = col * (ring * 3.2 + (rayMajor + rayMinor) * 2.2 + crepuscular * 2.4) * uEclipse * edgeFade;
 
-          gl_FragColor = vec4(coronaCol, clamp((ring * 2.0 + rayMajor + rayMinor) * uEclipse, 0.0, 1.0));
+          gl_FragColor = vec4(coronaCol, clamp((ring * 2.0 + rayMajor + rayMinor + crepuscular * 1.8) * uEclipse * edgeFade, 0.0, 1.0));
         }
       `
     });
