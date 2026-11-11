@@ -108,6 +108,9 @@ export class Scene08CathedralThousandDoors {
     // 4. Escaping Particles (Snow, Red Dust, Rain Mist, Cyan Motes)
     this.createEscapingParticles();
 
+    // 5. High-Altitude Sanctuary Incense Motes in Vault Canopy
+    this.createSanctuaryIncenseMotes();
+
     scene.add(this.group);
   }
 
@@ -519,6 +522,50 @@ export class Scene08CathedralThousandDoors {
     this.group.add(this.escapingParticles);
   }
 
+  createSanctuaryIncenseMotes() {
+    this.incenseCount = 900;
+    const incensePos = new Float32Array(this.incenseCount * 3);
+    const incenseBase = new Float32Array(this.incenseCount * 3);
+    const incenseParams = new Float32Array(this.incenseCount * 3);
+
+    for (let i = 0; i < this.incenseCount; i++) {
+      const x = (Math.random() - 0.5) * 50.0;
+      const y = 18.0 + Math.random() * 30.0;
+      const z = 10.0 - Math.random() * 210.0;
+
+      incensePos[i * 3 + 0] = x;
+      incensePos[i * 3 + 1] = y;
+      incensePos[i * 3 + 2] = z;
+
+      incenseBase[i * 3 + 0] = x;
+      incenseBase[i * 3 + 1] = y;
+      incenseBase[i * 3 + 2] = z;
+
+      incenseParams[i * 3 + 0] = 0.4 + Math.random() * 0.8; // freq
+      incenseParams[i * 3 + 1] = Math.random() * Math.PI * 2.0; // phase
+      incenseParams[i * 3 + 2] = 0.5 + Math.random() * 0.9; // drift speed
+    }
+
+    const incenseGeo = new THREE.BufferGeometry();
+    incenseGeo.setAttribute('position', new THREE.BufferAttribute(incensePos, 3));
+    this.disposables.push(incenseGeo);
+
+    const incenseMat = new THREE.PointsMaterial({
+      color: 0xccddff,
+      size: 1.6,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    this.disposables.push(incenseMat);
+
+    this.incenseParticles = new THREE.Points(incenseGeo, incenseMat);
+    this.incenseBase = incenseBase;
+    this.incenseParams = incenseParams;
+    this.group.add(this.incenseParticles);
+  }
+
   update(time, deltaTime, progress) {
     const t = (time % this.duration);
 
@@ -587,6 +634,30 @@ export class Scene08CathedralThousandDoors {
         }
       }
       this.escapingParticles.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // High-altitude sanctuary incense motes animation drifting through Gothic vault
+    if (this.incenseParticles) {
+      const incenseOpacity = 0.22 + openAvg * 0.48;
+      this.incenseParticles.material.opacity = incenseOpacity;
+      const pos = this.incenseParticles.geometry.attributes.position.array;
+      for (let i = 0; i < this.incenseCount; i++) {
+        const i3 = i * 3;
+        const freq = this.incenseParams[i3 + 0];
+        const phase = this.incenseParams[i3 + 1];
+        const speed = this.incenseParams[i3 + 2];
+
+        // Gentle thermal convection rising and vault turbulence
+        pos[i3 + 0] = this.incenseBase[i3 + 0] + Math.sin(t * freq + phase) * 2.2 + Math.sin(pos[i3 + 2] * 0.05 + t * 0.8) * 1.5;
+        pos[i3 + 1] = this.incenseBase[i3 + 1] + Math.sin(t * 0.7 * freq + phase * 1.3) * 1.8 + (openAvg * Math.sin(pos[i3 + 0] * 0.1 + t * 1.2) * 1.2);
+        // Slow longitudinal drift down the sanctuary nave
+        let z = this.incenseBase[i3 + 2] + t * speed * 2.0;
+        if (z > 20.0) {
+          z = -200.0 + ((z - 20.0) % 220.0);
+        }
+        pos[i3 + 2] = z;
+      }
+      this.incenseParticles.geometry.attributes.position.needsUpdate = true;
     }
 
     // Cinematic Camera Choreography
