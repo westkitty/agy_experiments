@@ -4481,13 +4481,19 @@ float hash21(vec2 p) {
           float filamentMinor = smoothstep(0.095, 0.02, lineMinor) * 0.4;
           float filament = max(filamentMajor, filamentMinor);
 
-          // Deep woven gold coloring
+          // Deep woven gold coloring with spacetime tensor curvature chromatic dispersion
           vec3 goldBase = vec3(0.85, 0.65, 0.25);
           vec3 goldHot = vec3(1.0, 0.92, 0.65);
           vec3 deepVoid = vec3(0.02, 0.025, 0.04);
 
+          // Gravitational tensor strain shifts filament wavelength (blue-shifting compression, red-shifting tension)
+          float tensorStrain = vDeformation;
+          vec3 blueShift = vec3(0.35, 0.82, 1.25);
+          vec3 redShift = vec3(1.25, 0.45, 0.15);
+          vec3 strainColor = mix(goldHot, mix(redShift, blueShift, smoothstep(0.15, 0.75, tensorStrain)), smoothstep(0.1, 0.5, tensorStrain));
+
           vec3 color = mix(deepVoid, goldBase, filament * 0.85);
-          color += goldHot * (filament * vDeformation * 1.4);
+          color += strainColor * (filament * tensorStrain * 1.6);
 
           // Luminous seam lip glow right at tear boundary with crackling electric discharge arcs
           float lipDist = abs(abs(vDistToSeam) - (uSplitAmount * 24.0));
