@@ -118,7 +118,8 @@ export class Scene06WalkingShadow {
 
     this.coronaMat = new THREE.ShaderMaterial({
       uniforms: {
-        uEclipse: { value: 0.0 }
+        uEclipse: { value: 0.0 },
+        uTime: { value: 0.0 }
       },
       transparent: true,
       depthWrite: false,
@@ -132,15 +133,30 @@ export class Scene06WalkingShadow {
       `,
       fragmentShader: `
         uniform float uEclipse;
+        uniform float uTime;
         varying vec2 vUv;
         void main() {
           vec2 center = vUv - 0.5;
           float r = length(center) * 2.0;
-          // Intense solar corona ring with diamond burst
-          float ring = exp(-pow(r - 0.45, 2.0) * 45.0);
-          float rays = pow(max(sin(atan(center.y, center.x) * 16.0), 0.0), 3.0) * exp(-r * 2.0);
-          vec3 coronaCol = vec3(1.2, 0.95, 0.65) * (ring * 2.5 + rays * 1.5) * uEclipse;
-          gl_FragColor = vec4(coronaCol, (ring + rays) * uEclipse);
+          float theta = atan(center.y, center.x);
+
+          // Diamond ring / Baily's beads effect on edge
+          float ring = exp(-pow(r - 0.42, 2.0) * 60.0);
+
+          // Multi-frequency solar coronal streamers and prominences
+          float rayMajor = pow(max(sin(theta * 8.0 + uTime * 0.3), 0.0), 4.0) * exp(-r * 1.6);
+          float rayMinor = pow(max(sin(theta * 32.0 - uTime * 0.5), 0.0), 6.0) * exp(-r * 2.8) * 0.7;
+
+          // Chromatic dispersion across corona (incandescent core, golden ring, violet outer fringe)
+          vec3 whiteCore = vec3(1.3, 1.2, 1.0);
+          vec3 goldRing = vec3(1.0, 0.75, 0.35);
+          vec3 violetFringe = vec3(0.85, 0.35, 0.65);
+
+          vec3 col = mix(goldRing, whiteCore, ring);
+          col = mix(col, violetFringe, clamp(r - 0.5, 0.0, 1.0));
+          vec3 coronaCol = col * (ring * 3.2 + (rayMajor + rayMinor) * 2.2) * uEclipse;
+
+          gl_FragColor = vec4(coronaCol, clamp((ring * 2.0 + rayMajor + rayMinor) * uEclipse, 0.0, 1.0));
         }
       `
     });
@@ -348,6 +364,7 @@ export class Scene06WalkingShadow {
 
     // Corona burst during eclipse
     this.coronaMat.uniforms.uEclipse.value = eclipseFactor;
+    this.coronaMat.uniforms.uTime.value = t;
 
     // Cinematic Camera Choreography
     let camPos = new THREE.Vector3();
