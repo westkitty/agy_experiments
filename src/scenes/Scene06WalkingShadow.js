@@ -45,7 +45,9 @@ export class Scene06WalkingShadow {
     this.terrainMat = new THREE.ShaderMaterial({
       uniforms: {
         uSunIntensity: { value: 1.0 },
-        uShadowDist: { value: 0.0 }
+        uTitanPos: { value: new THREE.Vector2(0, 48) },
+        uStepPhase: { value: 0 },
+        uTitanActive: { value: 0 }
       },
       vertexShader: `
         ${GLSL_NOISE}
@@ -64,6 +66,9 @@ export class Scene06WalkingShadow {
       `,
       fragmentShader: `
         uniform float uSunIntensity;
+        uniform vec2 uTitanPos;
+        uniform float uStepPhase;
+        uniform float uTitanActive;
         varying vec3 vWorldPos;
         varying vec3 vNormal;
         void main() {
@@ -73,6 +78,15 @@ export class Scene06WalkingShadow {
           vec3 sandBright = vec3(0.92, 0.74, 0.48);
           vec3 sandDim = vec3(0.35, 0.22, 0.18);
           vec3 sandCol = mix(sandDim, sandBright, NdotL * uSunIntensity);
+
+          // Titan footstep depression and radiating compression shockwaves
+          float distToTitan = length(vWorldPos.xz - uTitanPos);
+          float footShadow = smoothstep(22.0, 5.0, distToTitan) * 0.75 * uTitanActive;
+          float shockRadius = fract(uStepPhase * 0.5 + 0.5) * 32.0;
+          float shockWave = exp(-pow(distToTitan - shockRadius, 2.0) * 0.15) * smoothstep(32.0, 0.0, distToTitan) * uTitanActive;
+
+          sandCol = mix(sandCol, sandCol * 0.25, footShadow);
+          sandCol += vec3(0.18, 0.12, 0.08) * (shockWave * 0.55);
 
           // Atmospheric haze over distance
           float dist = length(vWorldPos.xz);
@@ -388,6 +402,9 @@ export class Scene06WalkingShadow {
     const currentSunIntensity = lerp(2.8, 0.35, Math.max(dimmingFactor * 0.6, eclipseFactor * 0.9));
     this.sunLight.intensity = currentSunIntensity;
     this.terrainMat.uniforms.uSunIntensity.value = currentSunIntensity / 2.8;
+    this.terrainMat.uniforms.uTitanPos.value.set(0, targetZ);
+    this.terrainMat.uniforms.uStepPhase.value = t * 2.8;
+    this.terrainMat.uniforms.uTitanActive.value = riseFactor;
 
     // Corona burst during eclipse
     this.coronaMat.uniforms.uEclipse.value = eclipseFactor;
