@@ -278,6 +278,52 @@ export class Scene09EmberRailway {
     beam.position.set(0, 3.2, 5.2);
     this.trainGroup.add(beam);
 
+    // Illuminated Ash Motes inside Headlight Beam
+    const beamMoteCount = 45;
+    const beamMotePos = new Float32Array(beamMoteCount * 3);
+    for (let i = 0; i < beamMoteCount; i++) {
+      const z = 6.0 + Math.random() * 28.0;
+      const spread = (z / 35.0) * 6.5;
+      beamMotePos[i * 3 + 0] = (Math.random() - 0.5) * spread;
+      beamMotePos[i * 3 + 1] = 3.2 + (Math.random() - 0.5) * spread;
+      beamMotePos[i * 3 + 2] = z;
+    }
+    const beamMoteGeo = new THREE.BufferGeometry();
+    beamMoteGeo.setAttribute('position', new THREE.BufferAttribute(beamMotePos, 3));
+    this.disposables.push(beamMoteGeo);
+
+    const beamMoteMat = new THREE.PointsMaterial({
+      color: 0xfff0cc,
+      size: 0.8,
+      transparent: true,
+      opacity: 0.75,
+      blending: THREE.AdditiveBlending
+    });
+    this.disposables.push(beamMoteMat);
+    this.beamMotes = new THREE.Points(beamMoteGeo, beamMoteMat);
+    this.trainGroup.add(this.beamMotes);
+
+    // Molten Firebox Undercarriage Grate & Downward Glow
+    const fireboxGrateGeo = new THREE.PlaneGeometry(3.6, 5.2);
+    fireboxGrateGeo.rotateX(-Math.PI / 2);
+    this.disposables.push(fireboxGrateGeo);
+
+    const fireboxMat = new THREE.MeshBasicMaterial({
+      color: 0xff3300,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending
+    });
+    this.disposables.push(fireboxMat);
+
+    const fireboxGrate = new THREE.Mesh(fireboxGrateGeo, fireboxMat);
+    fireboxGrate.position.set(0, 0.4, -3.2);
+    this.trainGroup.add(fireboxGrate);
+
+    this.fireboxLight = new THREE.PointLight(0xff4400, 3.0, 10);
+    this.fireboxLight.position.set(0, 0.3, -3.2);
+    this.trainGroup.add(this.fireboxLight);
+
     // Churning Drive Wheels & Connecting Rods
     this.driveWheels = [];
     const wheelGeo = new THREE.CylinderGeometry(1.4, 1.4, 0.4, 24);
@@ -373,6 +419,23 @@ export class Scene09EmberRailway {
     const m = new THREE.Matrix4();
     m.makeBasis(binormal, dynamicUp, trainTangent);
     this.trainGroup.quaternion.setFromRotationMatrix(m);
+
+    // Firebox underglow flicker
+    if (this.fireboxLight) {
+      this.fireboxLight.intensity = 2.8 + Math.sin(t * 16.0) * 0.9 + Math.cos(t * 24.0) * 0.5;
+    }
+
+    // Headlight beam motes drifting through illumination cone
+    if (this.beamMotes) {
+      const bPos = this.beamMotes.geometry.attributes.position.array;
+      for (let i = 0; i < 45; i++) {
+        bPos[i * 3 + 2] -= deltaTime * 12.0;
+        if (bPos[i * 3 + 2] < 6.0) {
+          bPos[i * 3 + 2] = 34.0;
+        }
+      }
+      this.beamMotes.geometry.attributes.position.needsUpdate = true;
+    }
 
     // Rotate drive wheels & reciprocating connecting rods
     const wheelRot = t * 18.0;
