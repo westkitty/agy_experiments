@@ -218,6 +218,36 @@ export class Scene03CanyonFloatingRings {
     this.dustAngles = dustAngles;
     this.group.add(this.dustParticles);
 
+    // 3b. Orbiting Tumbling Rock Debris Chunks (InstancedMesh)
+    const debrisCount = 75;
+    const debrisGeo = new THREE.DodecahedronGeometry(1.6, 0);
+    this.disposables.push(debrisGeo);
+    const debrisMat = new THREE.MeshStandardMaterial({
+      color: 0x9e6a45,
+      roughness: 0.88,
+      metalness: 0.05
+    });
+    this.disposables.push(debrisMat);
+    this.debrisMesh = new THREE.InstancedMesh(debrisGeo, debrisMat, debrisCount);
+    this.debrisMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.group.add(this.debrisMesh);
+
+    this.debrisData = [];
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < debrisCount; i++) {
+      const ringIdx = i % 5;
+      const r = ringConfigs[ringIdx].rOut + (Math.random() - 0.5) * 6.0;
+      const angle = Math.random() * Math.PI * 2;
+      const rotSpeed = (Math.random() - 0.5) * 3.5;
+      const scale = 0.6 + Math.random() * 0.9;
+      this.debrisData.push({ ringIdx, r, angle, rotSpeed, scale, y: Math.random() * 40 });
+      dummy.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+      dummy.scale.set(scale, scale, scale);
+      dummy.updateMatrix();
+      this.debrisMesh.setMatrixAt(i, dummy.matrix);
+    }
+    this.debrisDummy = dummy;
+
     // 4. Volumetric Light Shafts cutting through newly opened spaces
     const lightConeGeo = new THREE.CylinderGeometry(8, 70, 140, 24, 1, true);
     lightConeGeo.rotateX(-0.3);
@@ -305,6 +335,29 @@ export class Scene03CanyonFloatingRings {
         }
       }
       this.dustParticles.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // Tumbling Rock Debris Animation
+    if (this.debrisMesh && this.debrisData) {
+      const dummy = this.debrisDummy;
+      for (let i = 0; i < this.debrisData.length; i++) {
+        const d = this.debrisData[i];
+        const ring = this.rings[d.ringIdx];
+        d.angle += (ring.cfg.rotSpeed * 1.5 + d.rotSpeed * 0.1) * deltaTime;
+        const ringY = ring.mesh.position.y;
+        d.y -= deltaTime * 4.0;
+        if (d.y < 0) d.y = ringY + Math.random() * 8.0;
+        const curY = Math.min(d.y, ringY + 12.0) * smoothLift;
+
+        dummy.position.set(Math.cos(d.angle) * d.r, curY, Math.sin(d.angle) * d.r);
+        dummy.rotation.x += d.rotSpeed * deltaTime;
+        dummy.rotation.y += d.rotSpeed * 0.8 * deltaTime;
+        const s = d.scale * (0.2 + 0.8 * smoothLift);
+        dummy.scale.set(s, s, s);
+        dummy.updateMatrix();
+        this.debrisMesh.setMatrixAt(i, dummy.matrix);
+      }
+      this.debrisMesh.instanceMatrix.needsUpdate = true;
     }
 
     // Light shaft visibility through newly opened spaces
