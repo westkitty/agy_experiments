@@ -420,6 +420,40 @@ export class Scene09EmberRailway {
     this.steamVels = steamVels;
     this.steamLifes = steamLifes;
     this.group.add(this.steamParticles);
+
+    // 6. Dynamic Track Disintegration Ash Flakes & Burning Ember Trails
+    this.emberCount = 1400;
+    const emberPos = new Float32Array(this.emberCount * 3);
+    const emberVels = new Float32Array(this.emberCount * 3);
+    const emberLifes = new Float32Array(this.emberCount);
+    const emberColors = new Float32Array(this.emberCount * 3);
+
+    for (let i = 0; i < this.emberCount; i++) {
+      emberLifes[i] = Math.random();
+      emberPos[i * 3 + 0] = 0;
+      emberPos[i * 3 + 1] = -100;
+      emberPos[i * 3 + 2] = 0;
+    }
+
+    const emberGeo = new THREE.BufferGeometry();
+    emberGeo.setAttribute('position', new THREE.BufferAttribute(emberPos, 3));
+    emberGeo.setAttribute('color', new THREE.BufferAttribute(emberColors, 3));
+    this.disposables.push(emberGeo);
+
+    const emberMat = new THREE.PointsMaterial({
+      vertexColors: true,
+      size: 1.6,
+      transparent: true,
+      opacity: 0.92,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    this.disposables.push(emberMat);
+
+    this.emberParticles = new THREE.Points(emberGeo, emberMat);
+    this.emberVels = emberVels;
+    this.emberLifes = emberLifes;
+    this.group.add(this.emberParticles);
   }
 
   update(time, deltaTime, progress) {
@@ -514,6 +548,51 @@ export class Scene09EmberRailway {
     }
     this.steamParticles.geometry.attributes.position.needsUpdate = true;
     this.steamParticles.geometry.attributes.aLife.needsUpdate = true;
+
+    // Track Disintegration Ash & Ember Particle Simulation
+    if (this.emberParticles) {
+      const pos = this.emberParticles.geometry.attributes.position.array;
+      const col = this.emberParticles.geometry.attributes.color.array;
+
+      for (let i = 0; i < this.emberCount; i++) {
+        const idx = i * 3;
+        this.emberLifes[i] += deltaTime * 0.92;
+
+        if (this.emberLifes[i] >= 1.0) {
+          this.emberLifes[i] = 0.0;
+          // Spawn along disintegrating track zone behind the train
+          const trailU = (curveU - 0.055 - Math.random() * 0.08 + 1.0) % 1.0;
+          const p = this.trackCurve.getPointAt(trailU);
+          pos[idx + 0] = p.x + (Math.random() - 0.5) * 3.5;
+          pos[idx + 1] = p.y + (Math.random() - 0.5) * 1.2;
+          pos[idx + 2] = p.z + (Math.random() - 0.5) * 3.5;
+
+          this.emberVels[idx + 0] = (Math.random() - 0.5) * 3.5;
+          this.emberVels[idx + 1] = -2.0 - Math.random() * 6.0;
+          this.emberVels[idx + 2] = (Math.random() - 0.5) * 3.5;
+        } else {
+          // Downward gravity and swirling atmospheric turbulence
+          this.emberVels[idx + 1] -= 20.0 * deltaTime;
+          pos[idx + 0] += (this.emberVels[idx + 0] + Math.sin(pos[idx + 1] * 0.2 + t * 4.0) * 1.5) * deltaTime;
+          pos[idx + 1] += this.emberVels[idx + 1] * deltaTime;
+          pos[idx + 2] += (this.emberVels[idx + 2] + Math.cos(pos[idx + 1] * 0.2 + t * 4.0) * 1.5) * deltaTime;
+        }
+
+        // Color transition: incandescent molten gold -> fiery orange -> cooling charcoal ash
+        const life = this.emberLifes[i];
+        if (life < 0.25) {
+          col[idx + 0] = 1.4; col[idx + 1] = 0.95; col[idx + 2] = 0.45; // Incandescent gold
+        } else if (life < 0.6) {
+          col[idx + 0] = 1.2; col[idx + 1] = 0.45; col[idx + 2] = 0.08; // Fiery ember orange
+        } else {
+          const fade = 1.0 - (life - 0.6) / 0.4;
+          col[idx + 0] = 0.35 * fade; col[idx + 1] = 0.15 * fade; col[idx + 2] = 0.05 * fade; // Cooling charcoal ash
+        }
+      }
+
+      this.emberParticles.geometry.attributes.position.needsUpdate = true;
+      this.emberParticles.geometry.attributes.color.needsUpdate = true;
+    }
 
     // Cinematic Camera Tracking
     let camPos = new THREE.Vector3();
