@@ -364,7 +364,7 @@ export class Scene09EmberRailway {
   }
 
   createSteamParticles() {
-    this.steamCount = 180;
+    this.steamCount = 240;
     const steamPos = new Float32Array(this.steamCount * 3);
     const steamVels = new Float32Array(this.steamCount * 3);
     const steamLifes = new Float32Array(this.steamCount);
@@ -375,14 +375,44 @@ export class Scene09EmberRailway {
 
     const steamGeo = new THREE.BufferGeometry();
     steamGeo.setAttribute('position', new THREE.BufferAttribute(steamPos, 3));
+    steamGeo.setAttribute('aLife', new THREE.BufferAttribute(steamLifes, 1));
     this.disposables.push(steamGeo);
 
-    const steamMat = new THREE.PointsMaterial({
-      color: 0xccd4e0,
-      size: 2.8,
+    const steamMat = new THREE.ShaderMaterial({
       transparent: true,
-      opacity: 0.35,
-      blending: THREE.NormalBlending
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      vertexShader: `
+        attribute float aLife;
+        varying float vLife;
+        varying vec3 vWorldPos;
+        void main() {
+          vLife = aLife;
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          // Volumetric puff expansion as steam ages
+          gl_PointSize = (5.0 + aLife * 28.0) * (140.0 / length((viewMatrix * wp).xyz));
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        varying float vLife;
+        varying vec3 vWorldPos;
+        void main() {
+          vec2 coord = gl_PointCoord - vec2(0.5);
+          float dist = length(coord);
+          if (dist > 0.5) discard;
+          float softEdge = smoothstep(0.5, 0.08, dist);
+
+          // Chimney incandescent ember reflection at base, cooling to billowy steam
+          vec3 emberTint = vec3(1.2, 0.55, 0.15);
+          vec3 cloudWhite = vec3(0.82, 0.86, 0.92);
+          vec3 col = mix(emberTint, cloudWhite, smoothstep(0.0, 0.35, vLife));
+
+          float alpha = softEdge * (1.0 - vLife) * 0.42;
+          gl_FragColor = vec4(col, alpha);
+        }
+      `
     });
     this.disposables.push(steamMat);
 
@@ -450,27 +480,40 @@ export class Scene09EmberRailway {
       this.rightRod.position.set(2.45, 1.4 + Math.sin(wheelRot) * 0.55, 1.1 + Math.cos(wheelRot) * 0.55);
     }
 
-    // Animate steam puffs from smokestack
+    // Animate rhythmic steam puffs synchronized with driving wheel piston chuffs
+    const chuffPhase = Math.sin(wheelRot * 2.0);
+    const isChuffing = chuffPhase > 0.2;
     const stackWorld = new THREE.Vector3(0, 5.5, 3.5).applyMatrix4(this.trainGroup.matrixWorld);
     const steamPositions = this.steamParticles.geometry.attributes.position.array;
+    const steamLifesArr = this.steamParticles.geometry.attributes.aLife.array;
 
     for (let i = 0; i < this.steamCount; i++) {
-      this.steamLifes[i] += deltaTime * 0.8;
+      this.steamLifes[i] += deltaTime * 0.75;
+      steamLifesArr[i] = this.steamLifes[i];
       if (this.steamLifes[i] > 1.0) {
         this.steamLifes[i] = 0;
-        steamPositions[i * 3 + 0] = stackWorld.x + (Math.random() - 0.5) * 0.5;
-        steamPositions[i * 3 + 1] = stackWorld.y + (Math.random() - 0.5) * 0.5;
-        steamPositions[i * 3 + 2] = stackWorld.z + (Math.random() - 0.5) * 0.5;
-        this.steamVels[i * 3 + 0] = (Math.random() - 0.5) * 2.0;
-        this.steamVels[i * 3 + 1] = 3.0 + Math.random() * 3.0;
-        this.steamVels[i * 3 + 2] = -trainTangent.z * 5.0 + (Math.random() - 0.5) * 2.0;
+        steamLifesArr[i] = 0;
+        steamPositions[i * 3 + 0] = stackWorld.x + (Math.random() - 0.5) * 0.4;
+        steamPositions[i * 3 + 1] = stackWorld.y + (Math.random() - 0.5) * 0.4;
+        steamPositions[i * 3 + 2] = stackWorld.z + (Math.random() - 0.5) * 0.4;
+
+        const puffForce = isChuffing ? 7.2 : 2.8;
+        this.steamVels[i * 3 + 0] = -trainTangent.x * 12.0 + (Math.random() - 0.5) * 2.2;
+        this.steamVels[i * 3 + 1] = puffForce + Math.random() * 2.2;
+        this.steamVels[i * 3 + 2] = -trainTangent.z * 12.0 + (Math.random() - 0.5) * 2.2;
       } else {
+        // Atmospheric drag deceleration and upward buoyancy
+        this.steamVels[i * 3 + 0] *= 0.97;
+        this.steamVels[i * 3 + 1] += deltaTime * 1.5;
+        this.steamVels[i * 3 + 2] *= 0.97;
+
         steamPositions[i * 3 + 0] += this.steamVels[i * 3 + 0] * deltaTime;
         steamPositions[i * 3 + 1] += this.steamVels[i * 3 + 1] * deltaTime;
         steamPositions[i * 3 + 2] += this.steamVels[i * 3 + 2] * deltaTime;
       }
     }
     this.steamParticles.geometry.attributes.position.needsUpdate = true;
+    this.steamParticles.geometry.attributes.aLife.needsUpdate = true;
 
     // Cinematic Camera Tracking
     let camPos = new THREE.Vector3();
