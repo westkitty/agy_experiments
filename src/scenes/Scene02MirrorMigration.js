@@ -354,6 +354,54 @@ export class Scene02MirrorMigration {
     this.sunFlareMesh.position.set(0, 16, -345);
     this.group.add(this.sunFlareMesh);
 
+    // Converging Caustic Solar Ray Bundle from mirror field to horizon sun
+    const rayBundleGeo = new THREE.ConeGeometry(140, 360, 32, 1, true);
+    rayBundleGeo.rotateX(Math.PI / 2);
+    rayBundleGeo.translate(0, 0, 180);
+    this.disposables.push(rayBundleGeo);
+
+    this.rayBundleMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uSunAlign: { value: 0 }
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        void main() {
+          vUv = uv;
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uSunAlign;
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        void main() {
+          // Beam convergence toward apex at horizon sun
+          float beamRays = sin(vUv.x * 62.8 + uTime * 2.0) * 0.5 + 0.5;
+          float focalIntensity = pow(vUv.y, 2.5);
+          float edgeFade = sin(vUv.y * 3.14159);
+          vec3 rayColor = mix(vec3(1.0, 0.82, 0.45), vec3(1.2, 0.95, 0.7), focalIntensity);
+          float alpha = beamRays * edgeFade * uSunAlign * 0.45;
+          gl_FragColor = vec4(rayColor * 1.8, alpha);
+        }
+      `
+    });
+    this.disposables.push(this.rayBundleMat);
+
+    this.rayBundleMesh = new THREE.Mesh(rayBundleGeo, this.rayBundleMat);
+    this.rayBundleMesh.position.set(0, 16, -345);
+    this.rayBundleMesh.rotation.x = 0.08;
+    this.group.add(this.rayBundleMesh);
+
     scene.add(this.group);
   }
 
@@ -377,6 +425,10 @@ export class Scene02MirrorMigration {
     this.groundMat.uniforms.uSunAlign.value = sunAlignFactor;
     if (this.sunFlareMat) {
       this.sunFlareMat.uniforms.uSunAlign.value = smootherstep(0, 1, sunAlignFactor);
+    }
+    if (this.rayBundleMat) {
+      this.rayBundleMat.uniforms.uSunAlign.value = smootherstep(0, 1, sunAlignFactor);
+      this.rayBundleMat.uniforms.uTime.value = t;
     }
 
     // Cinematic Camera Choreography
