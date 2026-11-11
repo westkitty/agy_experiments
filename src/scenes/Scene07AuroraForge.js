@@ -143,6 +143,11 @@ export class Scene07AuroraForge {
 
           vec3 finalP = p + mix(fluidOffset, crystalOffset, uCrystal);
 
+          // Geomagnetic dipole field loop arch curvature (Birkeland polar cusp)
+          float polarCusp = pow(abs(p.x) / 140.0, 2.0);
+          finalP.y -= polarCusp * 18.0 * (1.0 - uCrystal * 0.5);
+          finalP.z += sin(p.x * 0.035 + uTime * 0.25) * polarCusp * 14.0;
+
           // Descent toward tundra surface
           finalP.y += 45.0 - (uDescent * 34.0);
 
