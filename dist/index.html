@@ -5125,7 +5125,42 @@ float hash21(vec2 p) {
           vec3 glassHighlight = vec3(0.9, 0.96, 1.0) * (fresnel * 0.75 + curvatureSheen + 0.05);
           gl_FragColor = vec4(glassHighlight, fresnel * 0.45 + 0.08);
         }
-      `});this.disposables.push(f),this.glassMesh=new Y(d,f),this.group.add(this.glassMesh)}update(e,t,n){let r=e%this.duration,i=0;i=r<8?0:r<26?Cu(0,1,(r-8)/18):r<38?1:1-Cu(0,1,(r-38)/10),this.grainUniforms.uTime.value=r,this.grainUniforms.uTransferProgress.value=i,this.astrolabeInner&&this.astrolabeOuter&&(this.astrolabeInner.rotation.z+=t*.45,this.astrolabeInner.rotation.y=Math.sin(r*.4)*.22,this.astrolabeOuter.rotation.z-=t*.28,this.astrolabeOuter.rotation.x=Math.PI/2+Math.cos(r*.35)*.18);let a=new K,o=new K(0,20,0);if(r<12){let e=r/12;a.set(Math.cos(e*1.5)*58,28+e*4,Math.sin(e*1.5)*58),o.set(0,20,0)}else if(r<26){let e=(r-12)/14,t=ju(26,-10,e);a.set(Math.sin(e*2.2+.4)*(42-Math.sin(e*Math.PI)*14),t+6,Math.cos(e*2.2+.4)*(42-Math.sin(e*Math.PI)*14)),o.set(0,t,0)}else if(r<38){let e=(r-26)/12;a.set(Math.cos(e*2)*54,-22+Math.sin(e*Math.PI)*6,Math.sin(e*2)*54),o.set(0,-22,0)}else{let e=(r-38)/12,t=ju(-20,28,e);a.set(Math.sin(2.4+e*1.2)*(50+e*8),t,Math.cos(2.4+e*1.2)*(50+e*8)),o.set(0,t*.6,0)}this.camera.position.copy(a),this.camera.lookAt(o)}render(e){e.render(this.scene,this.camera)}resize(e,t){this.camera.aspect=e/t,this.camera.updateProjectionMatrix()}dispose(){this.scene.remove(this.group),this.disposables.forEach(e=>{e&&typeof e.dispose==`function`&&e.dispose()}),this.disposables=[]}};function ju(e,t,n){return e+(t-e)*n}var Mu=class{constructor(){this.name=`The Walking Shadow`,this.duration=50,this.group=new sn,this.disposables=[]}init(e,t,n){this.camera=t,this.scene=n,n.background=new J(3285012),n.fog=new hn(3285012,.0035),t.fov=48,t.near=.5,t.far=1600,t.updateProjectionMatrix(),this.sunLight=new Ko(16772829,2.8),this.sunPos=new K(0,32,-220),this.sunLight.position.copy(this.sunPos),this.group.add(this.sunLight),this.ambLight=new qo(4862500,1.2),this.group.add(this.ambLight);let r=new Ga(600,600,80,80);r.rotateX(-Math.PI/2),this.disposables.push(r),this.terrainMat=new X({uniforms:{uSunIntensity:{value:1},uTitanPos:{value:new G(0,48)},uStepPhase:{value:0},uTitanActive:{value:0}},vertexShader:`
+      `});this.disposables.push(f),this.glassMesh=new Y(d,f),this.group.add(this.glassMesh);let p=new Ga(14,14);this.disposables.push(p);let m=new X({transparent:!0,blending:2,side:2,depthWrite:!1,uniforms:{uTime:{value:0},uIntensity:{value:0}},vertexShader:`
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          // Billboarding facing camera
+          vec4 mvPosition = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          mvPosition.xy += position.xy;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,fragmentShader:`
+        uniform float uTime;
+        uniform float uIntensity;
+        varying vec2 vUv;
+        void main() {
+          vec2 p = vUv * 2.0 - 1.0;
+          float r = length(p);
+          if (r > 1.0) discard;
+
+          // Multi-harmonic incandescent plasma core
+          float core = exp(-r * 3.8) * 2.6;
+          // Molten compression shockwave rings pulsating outward
+          float shock = sin(r * 22.0 - uTime * 18.0) * 0.5 + 0.5;
+          float ring = exp(-pow(r - 0.42, 2.0) * 45.0) * (0.6 + shock * 0.4);
+
+          // Anamorphic horizontal flare ray
+          float ray = exp(-abs(p.y) * 18.0) * exp(-abs(p.x) * 1.8) * 1.5;
+
+          vec3 goldCore = vec3(1.3, 1.1, 0.6);
+          vec3 moltenRed = vec3(1.4, 0.45, 0.1);
+          vec3 cyanFlash = vec3(0.3, 0.85, 1.2);
+
+          vec3 col = goldCore * core + moltenRed * ring + cyanFlash * ray;
+          float alpha = clamp((core + ring + ray) * uIntensity, 0.0, 1.0);
+          gl_FragColor = vec4(col * uIntensity * 1.8, alpha);
+        }
+      `});this.disposables.push(m),this.neckFlareMat=m,this.neckFlareMesh=new Y(p,m),this.neckFlareMesh.position.set(0,0,0),this.group.add(this.neckFlareMesh)}update(e,t,n){let r=e%this.duration,i=0;i=r<8?0:r<26?Cu(0,1,(r-8)/18):r<38?1:1-Cu(0,1,(r-38)/10),this.grainUniforms.uTime.value=r,this.grainUniforms.uTransferProgress.value=i,this.astrolabeInner&&this.astrolabeOuter&&(this.astrolabeInner.rotation.z+=t*.45,this.astrolabeInner.rotation.y=Math.sin(r*.4)*.22,this.astrolabeOuter.rotation.z-=t*.28,this.astrolabeOuter.rotation.x=Math.PI/2+Math.cos(r*.35)*.18);let a=r>=8&&r<=26||r>=38&&r<=48?r<26?$(8,14,r)*(1-$(22,26,r)):$(38,41,r)*(1-$(44,48,r)):0;this.neckFlareMat&&(this.neckFlareMat.uniforms.uTime.value=r,this.neckFlareMat.uniforms.uIntensity.value=a);let o=new K,s=new K(0,20,0);if(r<12){let e=r/12;o.set(Math.cos(e*1.5)*58,28+e*4,Math.sin(e*1.5)*58),s.set(0,20,0)}else if(r<26){let e=(r-12)/14,t=ju(26,-10,e);o.set(Math.sin(e*2.2+.4)*(42-Math.sin(e*Math.PI)*14),t+6,Math.cos(e*2.2+.4)*(42-Math.sin(e*Math.PI)*14)),s.set(0,t,0)}else if(r<38){let e=(r-26)/12;o.set(Math.cos(e*2)*54,-22+Math.sin(e*Math.PI)*6,Math.sin(e*2)*54),s.set(0,-22,0)}else{let e=(r-38)/12,t=ju(-20,28,e);o.set(Math.sin(2.4+e*1.2)*(50+e*8),t,Math.cos(2.4+e*1.2)*(50+e*8)),s.set(0,t*.6,0)}this.camera.position.copy(o),this.camera.lookAt(s)}render(e){e.render(this.scene,this.camera)}resize(e,t){this.camera.aspect=e/t,this.camera.updateProjectionMatrix()}dispose(){this.scene.remove(this.group),this.disposables.forEach(e=>{e&&typeof e.dispose==`function`&&e.dispose()}),this.disposables=[]}};function ju(e,t,n){return e+(t-e)*n}var Mu=class{constructor(){this.name=`The Walking Shadow`,this.duration=50,this.group=new sn,this.disposables=[]}init(e,t,n){this.camera=t,this.scene=n,n.background=new J(3285012),n.fog=new hn(3285012,.0035),t.fov=48,t.near=.5,t.far=1600,t.updateProjectionMatrix(),this.sunLight=new Ko(16772829,2.8),this.sunPos=new K(0,32,-220),this.sunLight.position.copy(this.sunPos),this.group.add(this.sunLight),this.ambLight=new qo(4862500,1.2),this.group.add(this.ambLight);let r=new Ga(600,600,80,80);r.rotateX(-Math.PI/2),this.disposables.push(r),this.terrainMat=new X({uniforms:{uSunIntensity:{value:1},uTitanPos:{value:new G(0,48)},uStepPhase:{value:0},uTitanActive:{value:0}},vertexShader:`
         ${wu}
         varying vec3 vWorldPos;
         varying vec3 vNormal;

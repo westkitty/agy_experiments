@@ -302,6 +302,64 @@ export class Scene05HourglassKingdoms {
 
     this.glassMesh = new THREE.Mesh(glassGeo, glassMat);
     this.group.add(this.glassMesh);
+
+    // 5. Incandescent Neck Constriction Flare Ring & Molten Shockwave Flare
+    const flareGeo = new THREE.PlaneGeometry(14.0, 14.0);
+    this.disposables.push(flareGeo);
+
+    const flareMat = new THREE.ShaderMaterial({
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      uniforms: {
+        uTime: { value: 0 },
+        uIntensity: { value: 0 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          // Billboarding facing camera
+          vec4 mvPosition = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+          mvPosition.xy += position.xy;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uIntensity;
+        varying vec2 vUv;
+        void main() {
+          vec2 p = vUv * 2.0 - 1.0;
+          float r = length(p);
+          if (r > 1.0) discard;
+
+          // Multi-harmonic incandescent plasma core
+          float core = exp(-r * 3.8) * 2.6;
+          // Molten compression shockwave rings pulsating outward
+          float shock = sin(r * 22.0 - uTime * 18.0) * 0.5 + 0.5;
+          float ring = exp(-pow(r - 0.42, 2.0) * 45.0) * (0.6 + shock * 0.4);
+
+          // Anamorphic horizontal flare ray
+          float ray = exp(-abs(p.y) * 18.0) * exp(-abs(p.x) * 1.8) * 1.5;
+
+          vec3 goldCore = vec3(1.3, 1.1, 0.6);
+          vec3 moltenRed = vec3(1.4, 0.45, 0.1);
+          vec3 cyanFlash = vec3(0.3, 0.85, 1.2);
+
+          vec3 col = goldCore * core + moltenRed * ring + cyanFlash * ray;
+          float alpha = clamp((core + ring + ray) * uIntensity, 0.0, 1.0);
+          gl_FragColor = vec4(col * uIntensity * 1.8, alpha);
+        }
+      `
+    });
+    this.disposables.push(flareMat);
+    this.neckFlareMat = flareMat;
+
+    this.neckFlareMesh = new THREE.Mesh(flareGeo, flareMat);
+    this.neckFlareMesh.position.set(0, 0, 0);
+    this.group.add(this.neckFlareMesh);
   }
 
   update(time, deltaTime, progress) {
@@ -332,6 +390,17 @@ export class Scene05HourglassKingdoms {
       this.astrolabeInner.rotation.y = Math.sin(t * 0.4) * 0.22;
       this.astrolabeOuter.rotation.z -= deltaTime * 0.28;
       this.astrolabeOuter.rotation.x = Math.PI / 2 + Math.cos(t * 0.35) * 0.18;
+    }
+
+    // Incandescent Neck Constriction Flare Intensity (peaks during active grain transit)
+    const isTransferring = (t >= 8 && t <= 26) || (t >= 38 && t <= 48);
+    const transferIntensity = isTransferring ?
+      (t < 26 ? smoothstep(8, 14, t) * (1.0 - smoothstep(22, 26, t))
+              : smoothstep(38, 41, t) * (1.0 - smoothstep(44, 48, t))) : 0.0;
+
+    if (this.neckFlareMat) {
+      this.neckFlareMat.uniforms.uTime.value = t;
+      this.neckFlareMat.uniforms.uIntensity.value = transferIntensity;
     }
 
     // Cinematic Camera Choreography
