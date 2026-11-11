@@ -260,6 +260,7 @@ export class Scene10ChromaticTide {
     const matTypes = new Float32Array(this.buildingCount);
     const dummy = new THREE.Object3D();
 
+    const rooftopData = [];
     let bIdx = 0;
     for (let gx = -4; gx <= 4; gx++) {
       for (let gz = -4; gz <= 4; gz++) {
@@ -283,6 +284,13 @@ export class Scene10ChromaticTide {
 
         matTypes[bIdx] = bIdx % 3; // 0 = Concrete, 1 = Glass, 2 = Metal
 
+        rooftopData.push({
+          x: x,
+          y: height,
+          z: z,
+          dist: Math.hypot(x, z - (-220))
+        });
+
         dummy.position.set(x, 0, z);
         dummy.updateMatrix();
         this.instancedBuildings.setMatrixAt(bIdx, dummy.matrix);
@@ -295,6 +303,9 @@ export class Scene10ChromaticTide {
     bGeo.setAttribute('aMatType', new THREE.InstancedBufferAttribute(matTypes, 1));
     this.instancedBuildings.instanceMatrix.needsUpdate = true;
     this.group.add(this.instancedBuildings);
+
+    // 2b. Aerial Chromatic Shockwave Mist Plumes from Rooftops
+    this.createRooftopMistParticles(rooftopData);
 
     // Horizon Color Point Beacon (sparks and ignites at t = 8)
     const beaconGeo = new THREE.SphereGeometry(3.5, 16, 16);
@@ -366,6 +377,60 @@ export class Scene10ChromaticTide {
     scene.add(this.group);
   }
 
+  createRooftopMistParticles(rooftopData) {
+    this.mistCount = 750;
+    const mistPos = new Float32Array(this.mistCount * 3);
+    const mistCol = new Float32Array(this.mistCount * 3);
+    this.mistRooftops = [];
+    this.mistLifes = new Float32Array(this.mistCount);
+    this.mistSpeeds = new Float32Array(this.mistCount);
+    this.mistOffsets = new Float32Array(this.mistCount * 2);
+
+    const colors = [
+      new THREE.Color(0x00e5ff), // Cyan
+      new THREE.Color(0xff2a8d), // Magenta
+      new THREE.Color(0xffd500), // Molten Gold
+      new THREE.Color(0x9d4edd), // Electric Violet
+      new THREE.Color(0x00ffaa)  // Emerald
+    ];
+
+    for (let i = 0; i < this.mistCount; i++) {
+      const rt = rooftopData[i % rooftopData.length];
+      this.mistRooftops.push(rt);
+      this.mistLifes[i] = Math.random();
+      this.mistSpeeds[i] = 0.4 + Math.random() * 0.7;
+      this.mistOffsets[i * 2 + 0] = (Math.random() - 0.5) * 6.0;
+      this.mistOffsets[i * 2 + 1] = (Math.random() - 0.5) * 6.0;
+
+      mistPos[i * 3 + 0] = rt.x;
+      mistPos[i * 3 + 1] = -100.0;
+      mistPos[i * 3 + 2] = rt.z;
+
+      const c = colors[i % colors.length];
+      mistCol[i * 3 + 0] = c.r;
+      mistCol[i * 3 + 1] = c.g;
+      mistCol[i * 3 + 2] = c.b;
+    }
+
+    const mistGeo = new THREE.BufferGeometry();
+    mistGeo.setAttribute('position', new THREE.BufferAttribute(mistPos, 3));
+    mistGeo.setAttribute('color', new THREE.BufferAttribute(mistCol, 3));
+    this.disposables.push(mistGeo);
+
+    this.mistMat = new THREE.PointsMaterial({
+      size: 2.2,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    this.disposables.push(this.mistMat);
+
+    this.mistParticles = new THREE.Points(mistGeo, this.mistMat);
+    this.group.add(this.mistParticles);
+  }
+
   update(time, deltaTime, progress) {
     const t = (time % this.duration);
 
@@ -398,6 +463,42 @@ export class Scene10ChromaticTide {
 
     this.chromaticUniforms.uTime.value = t;
     this.chromaticUniforms.uWaveRadius.value = radius;
+
+    // Dynamic Aerial Chromatic Shockwave Mist Plumes from Rooftops
+    if (this.mistParticles && this.mistRooftops) {
+      const mistOpacity = smoothstep(8, 14, t) * (1.0 - smoothstep(44, 48, t));
+      this.mistMat.opacity = mistOpacity * 0.8;
+
+      if (mistOpacity > 0.01) {
+        const pos = this.mistParticles.geometry.attributes.position.array;
+        for (let i = 0; i < this.mistCount; i++) {
+          const rt = this.mistRooftops[i];
+          const waveFront = radius - rt.dist;
+
+          if (waveFront > 0.0) {
+            this.mistLifes[i] += deltaTime * this.mistSpeeds[i];
+            if (this.mistLifes[i] >= 1.0) {
+              this.mistLifes[i] = 0.0;
+            }
+
+            const life = this.mistLifes[i];
+            const arcY = Math.sin(life * Math.PI) * (16.0 + (i % 5) * 4.0);
+            const driftX = Math.sin(life * 3.0 + i) * 4.5;
+            const driftZ = Math.cos(life * 3.0 + i) * 4.5;
+
+            pos[i * 3 + 0] = rt.x + this.mistOffsets[i * 2 + 0] + driftX;
+            pos[i * 3 + 1] = rt.y + arcY;
+            pos[i * 3 + 2] = rt.z + this.mistOffsets[i * 2 + 1] + driftZ;
+          } else {
+            // Dormant before wave front arrives
+            pos[i * 3 + 0] = rt.x;
+            pos[i * 3 + 1] = -100.0;
+            pos[i * 3 + 2] = rt.z;
+          }
+        }
+        this.mistParticles.geometry.attributes.position.needsUpdate = true;
+      }
+    }
 
     // Sky and Ambient color response
     const climaxFactor = smoothstep(22, 32, t) * (1.0 - smoothstep(38, 46, t));
