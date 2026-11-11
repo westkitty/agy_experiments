@@ -251,6 +251,67 @@ export class Scene07AuroraForge {
     this.disposables.push(starMat);
     this.group.add(new THREE.Points(starGeo, starMat));
 
+    // 4. Sub-Millimeter Crystalline Diamond Dust Ice Fog Dispersion
+    const diamondCount = 2200;
+    const diamondPos = new Float32Array(diamondCount * 3);
+    const diamondColors = new Float32Array(diamondCount * 3);
+    const diamondVel = new Float32Array(diamondCount * 3);
+    const diamondBase = new Float32Array(diamondCount * 3);
+
+    for (let i = 0; i < diamondCount; i++) {
+      const bx = (Math.random() - 0.5) * 260;
+      const by = Math.random() * 55 + 5;
+      const bz = (Math.random() - 0.5) * 110;
+
+      diamondBase[i * 3 + 0] = bx;
+      diamondBase[i * 3 + 1] = by;
+      diamondBase[i * 3 + 2] = bz;
+
+      diamondPos[i * 3 + 0] = bx;
+      diamondPos[i * 3 + 1] = by;
+      diamondPos[i * 3 + 2] = bz;
+
+      // Radial explosive drift velocity on fracture
+      const dirX = (Math.random() - 0.5) * 2.2;
+      const dirY = 0.8 + Math.random() * 2.4;
+      const dirZ = (Math.random() - 0.5) * 2.2;
+      diamondVel[i * 3 + 0] = dirX;
+      diamondVel[i * 3 + 1] = dirY;
+      diamondVel[i * 3 + 2] = dirZ;
+
+      // Prismatic diamond crystal colors
+      const cr = Math.random();
+      if (cr < 0.35) {
+        diamondColors[i * 3 + 0] = 0.3; diamondColors[i * 3 + 1] = 0.95; diamondColors[i * 3 + 2] = 0.65; // Emerald
+      } else if (cr < 0.65) {
+        diamondColors[i * 3 + 0] = 0.65; diamondColors[i * 3 + 1] = 0.45; diamondColors[i * 3 + 2] = 1.0; // Violet
+      } else if (cr < 0.85) {
+        diamondColors[i * 3 + 0] = 0.35; diamondColors[i * 3 + 1] = 0.85; diamondColors[i * 3 + 2] = 1.2; // Cyan
+      } else {
+        diamondColors[i * 3 + 0] = 1.3; diamondColors[i * 3 + 1] = 1.3; diamondColors[i * 3 + 2] = 1.4; // Diamond pure glint
+      }
+    }
+
+    const diamondGeo = new THREE.BufferGeometry();
+    diamondGeo.setAttribute('position', new THREE.BufferAttribute(diamondPos, 3));
+    diamondGeo.setAttribute('color', new THREE.BufferAttribute(diamondColors, 3));
+    this.disposables.push(diamondGeo);
+
+    const diamondMat = new THREE.PointsMaterial({
+      vertexColors: true,
+      size: 1.8,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending
+    });
+    this.disposables.push(diamondMat);
+
+    this.diamondDust = new THREE.Points(diamondGeo, diamondMat);
+    this.diamondBase = diamondBase;
+    this.diamondVel = diamondVel;
+    this.diamondCount = diamondCount;
+    this.group.add(this.diamondDust);
+
     scene.add(this.group);
   }
 
@@ -275,6 +336,25 @@ export class Scene07AuroraForge {
 
     this.snowMat.uniforms.uTime.value = t;
     this.snowMat.uniforms.uPrismIntensity.value = crystalFactor;
+
+    // Diamond Dust Ice Fog Dispersion Animation
+    if (this.diamondDust) {
+      const dustOpacity = (crystalFactor * 0.45 + fractureFactor * 0.9);
+      this.diamondDust.material.opacity = dustOpacity;
+
+      if (dustOpacity > 0.01) {
+        const pos = this.diamondDust.geometry.attributes.position.array;
+        for (let i = 0; i < this.diamondCount; i++) {
+          const idx = i * 3;
+          // When fracture is active, explosive upward and lateral dispersal
+          const f = fractureFactor * 45.0;
+          pos[idx + 0] = this.diamondBase[idx + 0] + this.diamondVel[idx + 0] * f + Math.sin(t * 2.0 + i) * 1.5;
+          pos[idx + 1] = this.diamondBase[idx + 1] + this.diamondVel[idx + 1] * f + Math.cos(t * 1.5 + i) * 1.2;
+          pos[idx + 2] = this.diamondBase[idx + 2] + this.diamondVel[idx + 2] * f;
+        }
+        this.diamondDust.geometry.attributes.position.needsUpdate = true;
+      }
+    }
 
     // Cinematic Camera Choreography
     let camPos = new THREE.Vector3();
