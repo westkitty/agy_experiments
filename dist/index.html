@@ -4741,7 +4741,15 @@ float hash21(vec2 p) {
           // Climax Sun Alignment: all mirrors converge reflections into one colossal horizon sun
           float horizonSunRay = max(dot(r, vec3(0.0, 0.05, -0.998)), 0.0);
           vec3 giantSun = vec3(1.2, 0.95, 0.55) * pow(horizonSunRay, 6.0) * 4.0;
+
+          // Horizontal anamorphic flare streak on aligned mirror faces
+          float glintRay = pow(horizonSunRay, 32.0);
+          float anamorphicStreak = pow(max(dot(vWorldNormal, vec3(0.0, 0.0, 1.0)), 0.0), 8.0) *
+                                   exp(-abs(vWorldPos.y - 12.0) * 0.12) * uSunAlign;
+          vec3 anamorphicCyanGold = mix(vec3(0.3, 0.85, 1.2), vec3(1.4, 1.2, 0.6), horizonSunRay);
+
           envCol = mix(envCol, envCol + giantSun, uSunAlign);
+          envCol += anamorphicCyanGold * (glintRay * 3.5 + anamorphicStreak * 1.8) * uSunAlign;
 
           // Prismatic glass edge bevels with spectral rainbow dispersion
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
