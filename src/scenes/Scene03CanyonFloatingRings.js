@@ -193,32 +193,54 @@ export class Scene03CanyonFloatingRings {
       });
     });
 
-    // 3. Cascading Dust & Sand Particles
-    const dustCount = 1800;
+    // 3. Cascading Dust & Sand Particles (Sheared Cliff Sandfalls)
+    const dustCount = 3600;
     const dustPos = new Float32Array(dustCount * 3);
+    const dustColors = new Float32Array(dustCount * 3);
     const dustSpeeds = new Float32Array(dustCount);
     const dustRadii = new Float32Array(dustCount);
     const dustAngles = new Float32Array(dustCount);
+    const dustRingIdx = new Uint8Array(dustCount);
 
     for (let i = 0; i < dustCount; i++) {
       const ringIdx = i % 5;
-      const r = ringConfigs[ringIdx].rOut - 1.5;
+      const cfg = ringConfigs[ringIdx];
+      // Distribute along both outer and inner sheared cliff rims
+      const isInner = (i % 2 === 0);
+      const rBase = isInner ? (cfg.rIn + 0.6) : (cfg.rOut - 0.8);
+      const r = rBase + (Math.random() - 0.5) * 1.6;
       const angle = Math.random() * Math.PI * 2;
+      dustRingIdx[i] = ringIdx;
       dustRadii[i] = r;
       dustAngles[i] = angle;
       dustPos[i * 3 + 0] = Math.cos(angle) * r;
       dustPos[i * 3 + 1] = Math.random() * 50;
       dustPos[i * 3 + 2] = Math.sin(angle) * r;
-      dustSpeeds[i] = 12 + Math.random() * 18;
+      dustSpeeds[i] = 14 + Math.random() * 22;
+
+      // Geological mineral colors: warm golden sandstone, iron-rich hematite, pale quartz silt
+      const colRand = Math.random();
+      let cr, cg, cb;
+      if (colRand < 0.5) {
+        cr = 0.88; cg = 0.62; cb = 0.36; // Golden sandstone
+      } else if (colRand < 0.8) {
+        cr = 0.68; cg = 0.32; cb = 0.18; // Iron hematite
+      } else {
+        cr = 0.96; cg = 0.88; cb = 0.72; // Quartz silt glint
+      }
+      dustColors[i * 3 + 0] = cr;
+      dustColors[i * 3 + 1] = cg;
+      dustColors[i * 3 + 2] = cb;
     }
 
     const dustGeo = new THREE.BufferGeometry();
     dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+    dustGeo.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
     this.disposables.push(dustGeo);
 
     const dustMat = new THREE.PointsMaterial({
-      color: 0xdf9855,
-      size: 1.5,
+      vertexColors: true,
+      size: 1.6,
       transparent: true,
       opacity: 0.0 // Controlled dynamically
     });
@@ -228,6 +250,8 @@ export class Scene03CanyonFloatingRings {
     this.dustSpeeds = dustSpeeds;
     this.dustRadii = dustRadii;
     this.dustAngles = dustAngles;
+    this.dustRingIdx = dustRingIdx;
+    this.dustCount = dustCount;
     this.group.add(this.dustParticles);
 
     // 3b. Orbiting Tumbling Rock Debris Chunks (InstancedMesh)
@@ -341,17 +365,30 @@ export class Scene03CanyonFloatingRings {
       r.mesh.rotation.z = r.cfg.tilt * smoothLift;
     });
 
-    // Cascading Dust Animation
+    // Cascading Dust & Sandfalls Animation
     const dustPositions = this.dustParticles.geometry.attributes.position.array;
     const dustOpacity = smoothstep(8, 16, t) * (1.0 - smoothstep(37, 46, t));
-    this.dustParticles.material.opacity = dustOpacity * 0.75;
+    this.dustParticles.material.opacity = dustOpacity * 0.85;
 
     if (dustOpacity > 0.01) {
-      for (let i = 0; i < this.dustSpeeds.length; i++) {
+      for (let i = 0; i < this.dustCount; i++) {
+        const ringIdx = this.dustRingIdx[i];
+        const ring = this.rings[ringIdx];
+        const ringY = ring.mesh.position.y;
+
         dustPositions[i * 3 + 1] -= this.dustSpeeds[i] * deltaTime;
+
+        // Kinematic rotational tracking with aerodynamic slipstream flutter
+        const baseAngle = this.dustAngles[i] + ring.currentRot;
+        const yDist = Math.max(0, ringY - dustPositions[i * 3 + 1]);
+        const flutter = Math.sin(dustPositions[i * 3 + 1] * 0.14 + t * 2.0) * (0.2 + yDist * 0.02);
+        const r = this.dustRadii[i] + flutter;
+
+        dustPositions[i * 3 + 0] = Math.cos(baseAngle) * r;
+        dustPositions[i * 3 + 2] = Math.sin(baseAngle) * r;
+
         if (dustPositions[i * 3 + 1] < -5) {
-          const ringIdx = i % 5;
-          dustPositions[i * 3 + 1] = this.rings[ringIdx].mesh.position.y + 5;
+          dustPositions[i * 3 + 1] = ringY + Math.random() * 3.0;
         }
       }
       this.dustParticles.geometry.attributes.position.needsUpdate = true;
@@ -391,23 +428,23 @@ export class Scene03CanyonFloatingRings {
     if (t < 14) {
       // Approaching the canyon formations from low altitude
       const p = t / 14;
-      camPos.set(Math.sin(p * 1.2) * 60, 8 + p * 8, 170 - p * 60);
-      lookTarget.set(0, 10, 20);
+      camPos.set(Math.sin(p * 0.8) * 90, 42 + p * 20, 260 - p * 70);
+      lookTarget.set(0, 20, 20);
     } else if (t < 26) {
-      // Looking up as colossal concentric strata rings lift overhead
+      // Looking across as colossal concentric strata rings lift overhead
       const p = (t - 14) / 12;
-      camPos.set(Math.cos(p * 1.5) * 85, 16 + p * 28, 90 - p * 40);
-      lookTarget.set(0, 32, 0);
+      camPos.set(Math.cos(p * 1.0) * 160, 55 + p * 35, 150 - p * 30);
+      lookTarget.set(0, 36, 0);
     } else if (t < 38) {
-      // Flying through the rings between inner and outer stone walls
+      // Sweeping high around the suspended stone tiers
       const p = (t - 26) / 12;
-      camPos.set(Math.sin(p * 2.2 + 0.5) * 65, 42 - Math.sin(p * Math.PI) * 12, Math.cos(p * 2.2 + 0.5) * 65);
-      lookTarget.set(0, 35, 0);
+      camPos.set(Math.sin(p * 1.6 + 0.5) * 170, 78 - Math.sin(p * Math.PI) * 18, Math.cos(p * 1.6 + 0.5) * 170);
+      lookTarget.set(0, 30, 0);
     } else {
       // Ascending to dramatic high overview as rings lock back into the canyon floor
       const p = (t - 38) / 12;
-      camPos.set(Math.sin(2.7 + p * 0.8) * 130, 48 + p * 30, Math.cos(2.7 + p * 0.8) * 130);
-      lookTarget.set(0, 5, 0);
+      camPos.set(Math.sin(2.7 + p * 0.8) * 190, 85 + p * 35, Math.cos(2.7 + p * 0.8) * 190);
+      lookTarget.set(0, 8, 0);
     }
 
     this.camera.position.copy(camPos);
