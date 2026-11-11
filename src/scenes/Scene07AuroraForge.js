@@ -182,11 +182,22 @@ export class Scene07AuroraForge {
           vec3 auroraCol = mix(emerald, cyan, colorT);
           auroraCol = mix(auroraCol, violet, smoothstep(0.6, 0.95, sin(vWorldPos.y * 0.1 + uTime)));
 
-          // Solid crystal shader properties
+          // Solid crystal shader properties with internal prism facet dispersion
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
           float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
+
+          // Diamond internal facet reflections
+          float facetX = fract(vWorldPos.x * 0.18 + vFacet * 2.0);
+          float facetY = fract(vWorldPos.y * 0.12);
+          float internalPrism = pow(max(sin(facetX * 6.28 + facetY * 6.28), 0.0), 4.0) * 2.2;
+          vec3 prismSpectrum = vec3(
+            sin(facetX * 6.28) * 0.5 + 0.5,
+            sin(facetX * 6.28 + 2.09) * 0.5 + 0.5,
+            sin(facetX * 6.28 + 4.18) * 0.5 + 0.5
+          );
+
           vec3 facetedShade = mix(auroraCol * 0.8, gold, vFacet * 0.5);
-          vec3 crystalCol = facetedShade + vec3(0.4, 0.7, 1.0) * fresnel * 0.65;
+          vec3 crystalCol = facetedShade + vec3(0.4, 0.7, 1.0) * fresnel * 0.65 + prismSpectrum * (internalPrism * 0.55);
 
           vec3 finalCol = mix(auroraCol, crystalCol, uCrystal);
 
