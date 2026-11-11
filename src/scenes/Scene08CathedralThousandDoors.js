@@ -83,6 +83,9 @@ export class Scene08CathedralThousandDoors {
     this.portals = [];
     this.createGrandCorridor();
 
+    // 2b. Gothic Rib Vault Ceiling Tracery Arches
+    this.createGothicRibVaults();
+
     // 3. Hundreds of Distant Suspended Doorframes
     this.createDistantDoorframes();
 
@@ -337,6 +340,97 @@ export class Scene08CathedralThousandDoors {
         worldType: row % 4
       });
     }
+  }
+
+  createGothicRibVaults() {
+    const vaultMat = new THREE.MeshStandardMaterial({
+      color: 0x181c26,
+      roughness: 0.85,
+      metalness: 0.25
+    });
+    this.disposables.push(vaultMat);
+
+    const bayZ = [45, 20, -35, -90, -145, -180];
+
+    // 1. Transverse Pointed Gothic Lancet Rib Arches
+    const archSegments = 20;
+    bayZ.forEach(z => {
+      const pts = [];
+      for (let s = 0; s <= archSegments; s++) {
+        const u = s / archSegments;
+        let x, y;
+        if (u <= 0.5) {
+          const t = u * 2.0;
+          x = -18.0 + t * 18.0;
+          y = 20.0 + Math.pow(Math.sin(t * Math.PI * 0.5), 0.72) * 16.0;
+        } else {
+          const t = (u - 0.5) * 2.0;
+          x = t * 18.0;
+          y = 36.0 - Math.pow(t, 1.35) * 16.0;
+        }
+        pts.push(new THREE.Vector3(x, y, z));
+      }
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const tubeGeo = new THREE.TubeGeometry(curve, 20, 0.55, 6, false);
+      this.disposables.push(tubeGeo);
+      const archMesh = new THREE.Mesh(tubeGeo, vaultMat);
+      this.group.add(archMesh);
+    });
+
+    // 2. Diagonal Cross-Ribs (Groined vaulting between adjacent bays)
+    for (let b = 0; b < bayZ.length - 1; b++) {
+      const z0 = bayZ[b];
+      const z1 = bayZ[b + 1];
+      const midZ = (z0 + z1) * 0.5;
+
+      // Diagonal rib 1: (-18, 20, z0) -> (0, 36.5, midZ) -> (+18, 20, z1)
+      const pts1 = [
+        new THREE.Vector3(-18, 20, z0),
+        new THREE.Vector3(-9, 30, (z0 * 0.75 + midZ * 0.25)),
+        new THREE.Vector3(0, 36.5, midZ),
+        new THREE.Vector3(9, 30, (midZ * 0.25 + z1 * 0.75)),
+        new THREE.Vector3(18, 20, z1)
+      ];
+      const curve1 = new THREE.CatmullRomCurve3(pts1);
+      const tube1 = new THREE.TubeGeometry(curve1, 16, 0.45, 6, false);
+      this.disposables.push(tube1);
+      this.group.add(new THREE.Mesh(tube1, vaultMat));
+
+      // Diagonal rib 2: (+18, 20, z0) -> (0, 36.5, midZ) -> (-18, 20, z1)
+      const pts2 = [
+        new THREE.Vector3(18, 20, z0),
+        new THREE.Vector3(9, 30, (z0 * 0.75 + midZ * 0.25)),
+        new THREE.Vector3(0, 36.5, midZ),
+        new THREE.Vector3(-9, 30, (midZ * 0.25 + z1 * 0.75)),
+        new THREE.Vector3(-18, 20, z1)
+      ];
+      const curve2 = new THREE.CatmullRomCurve3(pts2);
+      const tube2 = new THREE.TubeGeometry(curve2, 16, 0.45, 6, false);
+      this.disposables.push(tube2);
+      this.group.add(new THREE.Mesh(tube2, vaultMat));
+    }
+
+    // 3. Central Ridge Rib Spine at Keystone Height (y = 36)
+    const spinePts = [
+      new THREE.Vector3(0, 36, bayZ[0]),
+      new THREE.Vector3(0, 36.5, (bayZ[0] + bayZ[bayZ.length - 1]) * 0.5),
+      new THREE.Vector3(0, 36, bayZ[bayZ.length - 1])
+    ];
+    const spineCurve = new THREE.CatmullRomCurve3(spinePts);
+    const spineGeo = new THREE.TubeGeometry(spineCurve, 24, 0.6, 6, false);
+    this.disposables.push(spineGeo);
+    this.group.add(new THREE.Mesh(spineGeo, vaultMat));
+
+    // 4. Vertical Engaged Wall Pier Colonnettes at Each Portal Pier
+    const colGeo = new THREE.CylinderGeometry(0.5, 0.6, 20, 8);
+    this.disposables.push(colGeo);
+    bayZ.forEach(z => {
+      [-18, 18].forEach(x => {
+        const pier = new THREE.Mesh(colGeo, vaultMat);
+        pier.position.set(x, 10, z);
+        this.group.add(pier);
+      });
+    });
   }
 
   createDistantDoorframes() {
