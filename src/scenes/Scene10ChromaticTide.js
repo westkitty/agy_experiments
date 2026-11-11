@@ -272,6 +272,63 @@ export class Scene10ChromaticTide {
     this.beaconMesh.position.set(0, 18, -220);
     this.group.add(this.beaconMesh);
 
+    // Horizon Celestial Shockwave Ring (expands across sky canopy at climax)
+    const shockGeo = new THREE.RingGeometry(10, 360, 64, 4);
+    shockGeo.rotateX(-Math.PI / 2);
+    this.disposables.push(shockGeo);
+
+    this.shockMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uWaveRadius: this.chromaticUniforms.uWaveRadius,
+        uClimaxFactor: { value: 0 }
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        void main() {
+          vUv = uv;
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uWaveRadius;
+        uniform float uClimaxFactor;
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+
+        void main() {
+          float dist = length(vWorldPos.xz);
+          float ringFront = abs(dist - uWaveRadius * 0.92);
+          float ringIntensity = exp(-ringFront * 0.08) * uClimaxFactor;
+
+          // Chromatic rainbow dispersion along shockwave
+          float spectral = fract(dist * 0.02 - uTime * 0.4);
+          vec3 prism = vec3(
+            sin(spectral * 6.28) * 0.5 + 0.5,
+            sin(spectral * 6.28 + 2.09) * 0.5 + 0.5,
+            sin(spectral * 6.28 + 4.18) * 0.5 + 0.5
+          );
+
+          vec3 color = mix(vec3(0.3, 0.8, 1.0), prism, 0.7) * ringIntensity * 1.8;
+          float alpha = clamp(ringIntensity * 0.85, 0.0, 1.0);
+          gl_FragColor = vec4(color, alpha);
+        }
+      `
+    });
+    this.disposables.push(this.shockMat);
+
+    this.shockMesh = new THREE.Mesh(shockGeo, this.shockMat);
+    this.shockMesh.position.set(0, 110, -100);
+    this.group.add(this.shockMesh);
+
     scene.add(this.group);
   }
 
@@ -317,6 +374,8 @@ export class Scene10ChromaticTide {
     );
     this.scene.background = skyCol;
     this.scene.fog.color = skyCol;
+    this.shockMat.uniforms.uClimaxFactor.value = climaxFactor;
+    this.shockMat.uniforms.uTime.value = t;
 
     // Cinematic Camera Choreography
     let camPos = new THREE.Vector3();
