@@ -104,17 +104,66 @@ export class Scene06WalkingShadow {
     terrainMesh.position.y = -6;
     this.group.add(terrainMesh);
 
-    // Ruined Ancient Columns
-    const colGeo = new THREE.CylinderGeometry(2.0, 2.2, 18, 16);
+    // Ruined Ancient Fluted Columns with dynamic titan shadow & solar eclipse reaction
+    const colGeo = new THREE.CylinderGeometry(2.0, 2.3, 18, 32);
     this.disposables.push(colGeo);
-    const colMat = new THREE.MeshStandardMaterial({ color: 0x8a7058, roughness: 0.9 });
-    this.disposables.push(colMat);
+
+    this.columnMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uSunIntensity: { value: 1.0 },
+        uTitanPos: { value: new THREE.Vector2(0, 0) },
+        uTitanActive: { value: 0.0 }
+      },
+      vertexShader: `
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        varying vec3 vLocalPos;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vLocalPos = position;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform float uSunIntensity;
+        uniform vec2 uTitanPos;
+        uniform float uTitanActive;
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        varying vec3 vLocalPos;
+
+        void main() {
+          vec3 sunDir = normalize(vec3(0.0, 32.0, -220.0) - vWorldPos);
+          float NdotL = max(dot(vNormal, sunDir), 0.0);
+
+          // Classical fluted column shaft channels
+          float fluting = 0.85 + 0.15 * cos(atan(vLocalPos.x, vLocalPos.z) * 16.0);
+          vec3 stoneBright = vec3(0.82, 0.72, 0.58) * fluting;
+          vec3 stoneDim = vec3(0.24, 0.18, 0.15);
+          vec3 stoneCol = mix(stoneDim, stoneBright, NdotL * uSunIntensity);
+
+          // Titan shadow occlusion engulfing columns as giant passes
+          float distToTitan = length(vWorldPos.xz - uTitanPos);
+          float colShadow = smoothstep(28.0, 6.0, distToTitan) * 0.82 * uTitanActive;
+          stoneCol = mix(stoneCol, stoneCol * 0.18, colShadow);
+
+          // Distance fog
+          float dist = length(vWorldPos.xz);
+          float fog = 1.0 - exp(-dist * 0.0035);
+          vec3 skyFog = mix(vec3(0.5, 0.32, 0.2), vec3(0.12, 0.08, 0.14), 1.0 - uSunIntensity);
+          gl_FragColor = vec4(mix(stoneCol, skyFog, fog), 1.0);
+        }
+      `
+    });
+    this.disposables.push(this.columnMat);
 
     const colPositions = [
       [-35, 3, 20], [-45, 2, 40], [35, 3, 10], [50, 4, -20], [-60, 5, -80], [45, 6, -110]
     ];
     colPositions.forEach(cp => {
-      const col = new THREE.Mesh(colGeo, colMat);
+      const col = new THREE.Mesh(colGeo, this.columnMat);
       col.position.set(cp[0], cp[1], cp[2]);
       col.rotation.z = (Math.random() - 0.5) * 0.2;
       this.group.add(col);
@@ -418,6 +467,12 @@ export class Scene06WalkingShadow {
     this.terrainMat.uniforms.uTitanPos.value.set(0, targetZ);
     this.terrainMat.uniforms.uStepPhase.value = t * 2.8;
     this.terrainMat.uniforms.uTitanActive.value = riseFactor;
+
+    if (this.columnMat) {
+      this.columnMat.uniforms.uSunIntensity.value = currentSunIntensity / 2.8;
+      this.columnMat.uniforms.uTitanPos.value.set(0, targetZ);
+      this.columnMat.uniforms.uTitanActive.value = riseFactor;
+    }
 
     // Corona burst during eclipse
     this.coronaMat.uniforms.uEclipse.value = eclipseFactor;
