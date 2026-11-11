@@ -5454,13 +5454,26 @@ float hash21(vec2 p) {
           vec3 snowBase = vec3(0.72, 0.85, 0.95);
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
 
-          // Moving prismatic caustics from the crystal forge overhead
+          // Moving prismatic caustics and focused hexagonal caustic halos from overhead crystal vault
           float pNoise = sin(vWorldPos.x * 0.08 + uTime * 0.8) * cos(vWorldPos.z * 0.08 - uTime * 0.6);
           vec3 prismCol = vec3(
             0.5 + 0.5 * sin(pNoise * 4.0),
             0.5 + 0.5 * sin(pNoise * 4.0 + 2.0),
             0.5 + 0.5 * sin(pNoise * 4.0 + 4.0)
           );
+
+          // Focused hexagonal caustic halos projected on snow surface
+          float rad = length(vWorldPos.xz);
+          float causticRing1 = exp(-pow(rad - 26.0, 2.0) * 0.08) * (0.6 + 0.4 * sin(atan(vWorldPos.z, vWorldPos.x) * 6.0 + uTime * 1.4));
+          float causticRing2 = exp(-pow(rad - 46.0, 2.0) * 0.05) * (0.6 + 0.4 * cos(atan(vWorldPos.z, vWorldPos.x) * 12.0 - uTime * 1.8));
+          float causticHalos = (causticRing1 + causticRing2 * 0.7) * uPrismIntensity;
+
+          vec3 rainbowHalo = vec3(
+            sin(rad * 0.28 - uTime * 1.2) * 0.5 + 0.5,
+            sin(rad * 0.28 - uTime * 1.2 + 2.09) * 0.5 + 0.5,
+            sin(rad * 0.28 - uTime * 1.2 + 4.18) * 0.5 + 0.5
+          );
+
           // Polar hoarfrost crystalline sparkle glints
           vec3 halfVec = normalize(viewDir + vec3(0.25, 0.9, 0.35));
           vec3 sparkleCoord = floor(vWorldPos * 3.5);
@@ -5469,7 +5482,7 @@ float hash21(vec2 p) {
           float NdotH = max(dot(randomNorm, halfVec), 0.0);
           float glint = pow(NdotH, 65.0) * step(0.962, sparkleHash) * 3.2;
 
-          vec3 finalColor = snowBase * 0.35 + prismCol * (uPrismIntensity * 0.85) + vec3(0.9, 0.98, 1.2) * glint;
+          vec3 finalColor = snowBase * 0.35 + (prismCol * 0.65 + rainbowHalo * (causticHalos * 1.8)) * (uPrismIntensity * 0.95) + vec3(0.9, 0.98, 1.2) * glint;
 
           // Horizon distance fog
           float dist = length(vWorldPos.xz);
