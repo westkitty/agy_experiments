@@ -378,6 +378,45 @@ export class Scene01GravityLoom {
     this.subLoomMesh = new THREE.Mesh(subLoomGeo, subLoomMat);
     this.group.add(this.subLoomMesh);
 
+    // 3. Orbiting Cosmic Dust Nebulae (1,200 stardust particles orbiting gravitational wells)
+    const dustCount = 1200;
+    const dustPos = new Float32Array(dustCount * 3);
+    const dustOrigins = new Float32Array(dustCount * 3);
+    const dustMassIndex = new Float32Array(dustCount);
+    const dustSpeeds = new Float32Array(dustCount);
+
+    for (let i = 0; i < dustCount; i++) {
+      const massIdx = i % 3;
+      dustMassIndex[i] = massIdx;
+      const angle = Math.random() * Math.PI * 2;
+      const r = 4.0 + Math.random() * 26.0;
+      dustOrigins[i * 3 + 0] = Math.cos(angle) * r;
+      dustOrigins[i * 3 + 1] = (Math.random() - 0.5) * 6.0;
+      dustOrigins[i * 3 + 2] = Math.sin(angle) * r;
+      dustSpeeds[i] = (1.4 + Math.random() * 2.2) * (Math.random() > 0.5 ? 1 : -1);
+    }
+
+    const cosmicDustGeo = new THREE.BufferGeometry();
+    cosmicDustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+    this.disposables.push(cosmicDustGeo);
+    this.cosmicDustGeo = cosmicDustGeo;
+    this.cosmicDustPos = dustPos;
+    this.cosmicDustOrigins = dustOrigins;
+    this.cosmicDustMassIndex = dustMassIndex;
+    this.cosmicDustSpeeds = dustSpeeds;
+    this.cosmicDustCount = dustCount;
+
+    const cosmicDustMat = new THREE.PointsMaterial({
+      color: 0xffe888,
+      size: 1.3,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending
+    });
+    this.disposables.push(cosmicDustMat);
+    this.cosmicDustMesh = new THREE.Points(cosmicDustGeo, cosmicDustMat);
+    this.group.add(this.cosmicDustMesh);
+
     // Background cosmic starfield particles
     const starCount = 1500;
     const starPositions = new Float32Array(starCount * 3);
@@ -422,6 +461,27 @@ export class Scene01GravityLoom {
       cm.group.position.copy(cm.pos);
       if (cm.ring) cm.ring.rotation.z = t * (1.2 + idx * 0.4);
     });
+
+    // Animate cosmic dust nebulae orbiting celestial gravitational wells
+    if (this.cosmicDustGeo && this.cosmicDustPos) {
+      const pos = this.cosmicDustPos;
+      const origins = this.cosmicDustOrigins;
+      const massIndices = this.cosmicDustMassIndex;
+      const speeds = this.cosmicDustSpeeds;
+      const count = this.cosmicDustCount;
+
+      for (let i = 0; i < count; i++) {
+        const mIdx = massIndices[i];
+        const mPos = this.celestialMasses[mIdx].pos;
+        const speed = speeds[i];
+        const theta = t * speed * 0.5 + i * 0.15;
+        const r = Math.sqrt(origins[i * 3 + 0] * origins[i * 3 + 0] + origins[i * 3 + 2] * origins[i * 3 + 2]);
+        pos[i * 3 + 0] = mPos.x + Math.cos(theta) * r;
+        pos[i * 3 + 1] = mPos.y + origins[i * 3 + 1] + Math.sin(theta * 2.0) * 1.5;
+        pos[i * 3 + 2] = mPos.z + Math.sin(theta) * r;
+      }
+      this.cosmicDustGeo.attributes.position.needsUpdate = true;
+    }
 
     // Update membrane uniforms
     this.membraneUniforms.uTime.value = t;
