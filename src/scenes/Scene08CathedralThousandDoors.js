@@ -277,6 +277,52 @@ export class Scene08CathedralThousandDoors {
       spillMesh.position.set(xPos + (side * -8), 0.05, zPos);
       this.group.add(spillMesh);
 
+      // Volumetric God Ray Shaft projecting forward into cathedral aisle
+      const beamGeo = new THREE.CylinderGeometry(3.6, 14.0, 32, 16, 1, true);
+      beamGeo.rotateX(Math.PI / 2);
+      beamGeo.translate(0, -2, 16);
+      this.disposables.push(beamGeo);
+
+      const beamMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uColor: { value: worldCfg.lightCol },
+          uOpen: { value: 0 },
+          uTime: { value: 0 }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          varying vec3 vWorldPos;
+          void main() {
+            vUv = uv;
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorldPos = wp.xyz;
+            gl_Position = projectionMatrix * viewMatrix * wp;
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 uColor;
+          uniform float uOpen;
+          uniform float uTime;
+          varying vec2 vUv;
+          varying vec3 vWorldPos;
+          void main() {
+            float lengthFade = (1.0 - vUv.y) * smoothstep(0.0, 0.2, vUv.y);
+            float edgeFade = sin(vUv.x * 3.14159);
+            float dust = sin(vWorldPos.x * 0.4 + vWorldPos.z * 0.3 - uTime * 1.5) * 0.2 + 0.8;
+            float alpha = lengthFade * edgeFade * uOpen * 0.42 * dust;
+            gl_FragColor = vec4(uColor * 1.6, alpha);
+          }
+        `
+      });
+      this.disposables.push(beamMat);
+
+      const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+      portalGroup.add(beamMesh);
+
       this.group.add(portalGroup);
 
       this.portals.push({
@@ -286,6 +332,7 @@ export class Scene08CathedralThousandDoors {
         vistaMat,
         spillMesh,
         portalLight,
+        beamMat,
         openDelay: 6.0 + i * 2.8,
         worldType: row % 4
       });
@@ -394,6 +441,10 @@ export class Scene08CathedralThousandDoors {
       p.spillMesh.material.opacity = netOpen * 0.65;
       if (p.portalLight) {
         p.portalLight.intensity = netOpen * 3.8;
+      }
+      if (p.beamMat) {
+        p.beamMat.uniforms.uOpen.value = netOpen;
+        p.beamMat.uniforms.uTime.value = t;
       }
     });
 
