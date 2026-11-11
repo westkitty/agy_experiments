@@ -5071,8 +5071,15 @@ float hash21(vec2 p) {
             0.5 + 0.5 * sin(pNoise * 4.0 + 2.0),
             0.5 + 0.5 * sin(pNoise * 4.0 + 4.0)
           );
+          // Polar hoarfrost crystalline sparkle glints
+          vec3 halfVec = normalize(viewDir + vec3(0.25, 0.9, 0.35));
+          vec3 sparkleCoord = floor(vWorldPos * 3.5);
+          float sparkleHash = fract(sin(dot(sparkleCoord, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+          vec3 randomNorm = normalize(vNormal + (vec3(fract(sparkleHash * 13.0), fract(sparkleHash * 17.0), fract(sparkleHash * 23.0)) - 0.5) * 0.85);
+          float NdotH = max(dot(randomNorm, halfVec), 0.0);
+          float glint = pow(NdotH, 65.0) * step(0.962, sparkleHash) * 3.2;
 
-          vec3 finalColor = snowBase * 0.35 + prismCol * (uPrismIntensity * 0.85);
+          vec3 finalColor = snowBase * 0.35 + prismCol * (uPrismIntensity * 0.85) + vec3(0.9, 0.98, 1.2) * glint;
 
           // Horizon distance fog
           float dist = length(vWorldPos.xz);
