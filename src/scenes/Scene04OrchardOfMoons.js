@@ -94,6 +94,7 @@ export class Scene04OrchardOfMoons {
     // 2. Procedural Ancient Black Tree with Golden Sap Veins
     this.branchEndpoints = [];
     this.createTree();
+    this.createSapMotes();
 
     // 3. Hundreds of Luminous Moons
     this.moonCount = 64;
@@ -408,6 +409,45 @@ export class Scene04OrchardOfMoons {
     }
   }
 
+  createSapMotes() {
+    this.sapMoteCount = 650;
+    const sapPos = new Float32Array(this.sapMoteCount * 3);
+    const sapOrigins = new Float32Array(this.sapMoteCount * 3);
+    const sapVels = new Float32Array(this.sapMoteCount * 3);
+
+    for (let i = 0; i < this.sapMoteCount; i++) {
+      const bp = this.branchEndpoints[i % this.branchEndpoints.length];
+      sapOrigins[i * 3 + 0] = bp.x;
+      sapOrigins[i * 3 + 1] = bp.y;
+      sapOrigins[i * 3 + 2] = bp.z;
+      sapPos[i * 3 + 0] = bp.x;
+      sapPos[i * 3 + 1] = bp.y;
+      sapPos[i * 3 + 2] = bp.z;
+      sapVels[i * 3 + 0] = (Math.random() - 0.5) * 3.5;
+      sapVels[i * 3 + 1] = Math.random() * 2.8 + 0.4;
+      sapVels[i * 3 + 2] = (Math.random() - 0.5) * 3.5;
+    }
+
+    const sapGeo = new THREE.BufferGeometry();
+    sapGeo.setAttribute('position', new THREE.BufferAttribute(sapPos, 3));
+    this.disposables.push(sapGeo);
+    this.sapMoteGeo = sapGeo;
+    this.sapMotePos = sapPos;
+    this.sapMoteOrigins = sapOrigins;
+    this.sapMoteVels = sapVels;
+
+    const sapMat = new THREE.PointsMaterial({
+      color: 0xffe277,
+      size: 1.3,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending
+    });
+    this.disposables.push(sapMat);
+    this.sapMotePoints = new THREE.Points(sapGeo, sapMat);
+    this.group.add(this.sapMotePoints);
+  }
+
   update(time, deltaTime, progress) {
     const t = (time % this.duration);
 
@@ -415,6 +455,23 @@ export class Scene04OrchardOfMoons {
     const sapGlow = smoothstep(5, 15, t) * (1.0 - smoothstep(40, 48, t));
     this.sapUniforms.uGlow.value = sapGlow;
     this.sapUniforms.uTime.value = t;
+
+    // Bioluminescent sap droplet gout animation
+    if (this.sapMotePoints && this.sapMotePos) {
+      this.sapMotePoints.material.opacity = sapGlow * 0.85;
+      if (sapGlow > 0.01) {
+        const pArr = this.sapMotePos;
+        const oArr = this.sapMoteOrigins;
+        const vArr = this.sapMoteVels;
+        for (let i = 0; i < this.sapMoteCount; i++) {
+          const life = (t * 0.35 + i * 0.04) % 1.0;
+          pArr[i * 3 + 0] = oArr[i * 3 + 0] + vArr[i * 3 + 0] * life * 4.5 + Math.sin(t * 1.5 + i) * 0.7;
+          pArr[i * 3 + 1] = oArr[i * 3 + 1] + vArr[i * 3 + 1] * life * 5.0;
+          pArr[i * 3 + 2] = oArr[i * 3 + 2] + vArr[i * 3 + 2] * life * 4.5 + Math.cos(t * 1.5 + i) * 0.7;
+        }
+        this.sapMoteGeo.attributes.position.needsUpdate = true;
+      }
+    }
 
     // Orbital choreography
     this.moons.forEach((m, idx) => {
