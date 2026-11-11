@@ -35,6 +35,15 @@ html, body {
   touch-action: none;
 }
 
+#cinematic-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0) 58%, rgba(0, 0, 0, 0.38) 86%, rgba(0, 0, 0, 0.72) 100%);
+  mix-blend-mode: multiply;
+  z-index: 15;
+}
+
 #transition-veil {
   position: absolute;
   inset: 0;
