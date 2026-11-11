@@ -232,10 +232,12 @@ export class Scene06WalkingShadow {
     this.shadowTitan = new THREE.Group();
     this.shadowTitan.position.set(0, 0, 50);
 
-    // Light-absorbing silhouette material
+    // Light-absorbing silhouette material with solar diffraction penumbra
     this.shadowMat = new THREE.ShaderMaterial({
       uniforms: {
-        uAbsorption: { value: 1.0 }
+        uAbsorption: { value: 1.0 },
+        uEclipse: { value: 0.0 },
+        uSunIntensity: { value: 1.0 }
       },
       vertexShader: `
         varying vec3 vNormal;
@@ -248,15 +250,26 @@ export class Scene06WalkingShadow {
         }
       `,
       fragmentShader: `
+        uniform float uEclipse;
+        uniform float uSunIntensity;
         varying vec3 vNormal;
         varying vec3 vWorldPos;
         void main() {
-          // Pure light-absorbing void with subtle cosmic rim
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
-          float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
-          vec3 voidBlack = vec3(0.005, 0.008, 0.012);
-          vec3 rimAura = vec3(0.15, 0.2, 0.35) * fresnel * 0.45;
-          gl_FragColor = vec4(voidBlack + rimAura, 0.98);
+          float NdotV = max(dot(viewDir, vNormal), 0.0);
+          float edge = 1.0 - NdotV;
+
+          // Atmospheric penumbra diffraction fringe from low horizon sun
+          vec3 solarAmber = vec3(1.4, 0.75, 0.25);
+          vec3 violetScatter = vec3(0.45, 0.22, 0.7);
+          vec3 diffractionCol = mix(solarAmber, violetScatter, smoothstep(0.4, 0.95, edge));
+
+          // Blazing penumbral solar rim hugging silhouette perimeter during eclipse totality
+          float solarFringe = pow(edge, 6.0) * (uEclipse * 3.5 + 0.25);
+
+          vec3 voidBlack = vec3(0.003, 0.005, 0.008);
+          vec3 finalColor = voidBlack + diffractionCol * solarFringe;
+          gl_FragColor = vec4(finalColor, 0.98);
         }
       `
     });
@@ -409,6 +422,12 @@ export class Scene06WalkingShadow {
     // Corona burst during eclipse
     this.coronaMat.uniforms.uEclipse.value = eclipseFactor;
     this.coronaMat.uniforms.uTime.value = t;
+
+    // Atmospheric solar diffraction on shadow titan
+    if (this.shadowMat) {
+      this.shadowMat.uniforms.uEclipse.value = eclipseFactor;
+      this.shadowMat.uniforms.uSunIntensity.value = currentSunIntensity / 2.8;
+    }
 
     // Cinematic Camera Choreography
     let camPos = new THREE.Vector3();
