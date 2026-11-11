@@ -1,0 +1,23 @@
+{
+  "name": "agy_experiments",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "bugs": {
+    "url": "https://github.com/westkitty/agy_experiments/issues"
+  },
+  "homepage": "https://github.com/westkitty/agy_experiments#readme",
+  "dependencies": {
+    "three": "^0.187.0",
+    "vite": "^8.3.8"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.17.0",
+    "vite-plugin-singlefile": "^2.3.4"
+  }
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>The Impossible Cinema — Ten Experiments in Visual Impossibility</title>
+  <meta name="description" content="Ten Experiments in Visual Impossibility. A unified, cinematic, procedural 3D browser experience.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div id="experience-container" role="region" aria-label="The Impossible Cinema 3D Viewport">
+    <canvas id="webgl-canvas"></canvas>
+    <div id="transition-veil" aria-hidden="true"></div>
+    <div id="fallback-layer" aria-hidden="true"></div>
+  </div>
+
+  <div id="selector-wrapper">
+    <label for="scene-selector" class="sr-only">Select Experiment</label>
+    <select id="scene-selector" aria-label="Select Experiment">
+      <option value="autoplay" selected>Autoplay All</option>
+      <option value="01">01 — The Gravity Loom</option>
+      <option value="02">02 — The Mirror Migration</option>
+      <option value="03">03 — The Canyon of Floating Rings</option>
+      <option value="04">04 — The Orchard of Moons</option>
+      <option value="05">05 — The Hourglass of Kingdoms</option>
+      <option value="06">06 — The Walking Shadow</option>
+      <option value="07">07 — The Aurora Forge</option>
+      <option value="08">08 — The Cathedral of a Thousand Doors</option>
+      <option value="09">09 — The Ember Railway</option>
+      <option value="10">10 — The Chromatic Tide</option>
+    </select>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
