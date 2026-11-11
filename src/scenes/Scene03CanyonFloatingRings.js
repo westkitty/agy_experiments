@@ -328,8 +328,15 @@ export class Scene03CanyonFloatingRings {
           float ray2 = pow(sin(angle * 13.0 - uTime * 0.6) * 0.5 + 0.5, 2.5);
           float rayPattern = mix(0.4, 1.4, ray1 * ray2);
 
-          vec3 amberLight = vec3(1.1, 0.8, 0.45) * rayPattern;
-          float alpha = verticalFade * uOpacity * 0.28 * rayPattern;
+          // Canyon chasm convective heat shimmer and thermal turbulence
+          float heatHaze = sin(vWorldPos.y * 0.22 - uTime * 4.5 + vWorldPos.x * 0.15) *
+                           cos(vWorldPos.y * 0.18 + uTime * 3.8 + vWorldPos.z * 0.15);
+          float shimmer = sin(heatHaze * 5.0 + uTime * 5.5) * 0.5 + 0.5;
+          rayPattern += shimmer * 0.38 * smoothstep(5.0, 65.0, vWorldPos.y);
+
+          // Golden-amber solar core with thermal chromatic dispersion
+          vec3 amberLight = mix(vec3(1.25, 0.92, 0.52), vec3(1.35, 0.68, 0.32), shimmer * 0.35) * rayPattern;
+          float alpha = verticalFade * uOpacity * 0.32 * rayPattern;
           gl_FragColor = vec4(amberLight, alpha);
         }
       `
