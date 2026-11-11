@@ -78,6 +78,10 @@ export class Scene05HourglassKingdoms {
           vec3 pos = position;
           vec3 currentPos = aUpperPos;
 
+          // Pre-collapse seismic masonry trembling right before structural failure
+          float preDetach = smoothstep(-0.06, 0.0, uTransferProgress - aGrainDelay) * step(uTransferProgress, aGrainDelay);
+          pos += sin(vec3(uTime * 35.0 + aUpperPos.y * 2.0, uTime * 40.0 + aUpperPos.x * 2.0, uTime * 32.0 + aUpperPos.z * 2.0)) * preDetach * 0.08;
+
           if (s > 0.0001 && s < 0.9999) {
             // In transit between upper and lower kingdom
             float height = mix(aUpperPos.y, aLowerPos.y, s);
@@ -125,6 +129,12 @@ export class Scene05HourglassKingdoms {
           float depthShade = 0.75 + 0.25 * sin(vWorldPos.y * 3.0);
 
           vec3 baseStone = stoneColor * depthShade;
+
+          // Ancient spire stress fracture micro-cracks
+          float crack = sin(vWorldPos.y * 14.0 + vWorldPos.x * 9.0) * cos(vWorldPos.z * 11.0);
+          float isFracture = smoothstep(0.72, 0.96, crack) * (1.0 - vIsLower) * (1.0 - vIsGlow);
+          baseStone = mix(baseStone, vec3(0.22, 0.15, 0.1), isFracture * 0.7);
+
           vec3 col = mix(baseStone, glowColor * 2.2, vIsGlow);
           col += hotEmber * (neckHeat * 1.8);
 
@@ -360,6 +370,45 @@ export class Scene05HourglassKingdoms {
     this.neckFlareMesh = new THREE.Mesh(flareGeo, flareMat);
     this.neckFlareMesh.position.set(0, 0, 0);
     this.group.add(this.neckFlareMesh);
+
+    // 6. Masonry Dust & Spire Disintegration Debris Cloud (900 motes)
+    const dustCount = 900;
+    const dustGeo = new THREE.BufferGeometry();
+    const dustPositions = new Float32Array(dustCount * 3);
+    const dustInitial = new Float32Array(dustCount * 3);
+    const dustSpeeds = new Float32Array(dustCount);
+
+    for (let i = 0; i < dustCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const rad = 2.0 + Math.random() * 12.0;
+      const y = 8.0 + Math.random() * 26.0;
+      const x = Math.cos(theta) * rad;
+      const z = Math.sin(theta) * rad;
+      dustPositions[i * 3 + 0] = x;
+      dustPositions[i * 3 + 1] = y;
+      dustPositions[i * 3 + 2] = z;
+      dustInitial[i * 3 + 0] = x;
+      dustInitial[i * 3 + 1] = y;
+      dustInitial[i * 3 + 2] = z;
+      dustSpeeds[i] = 1.4 + Math.random() * 2.2;
+    }
+
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    this.dustInitial = dustInitial;
+    this.dustSpeeds = dustSpeeds;
+    this.dustPositions = dustPositions;
+    this.disposables.push(dustGeo);
+
+    const dustMat = new THREE.PointsMaterial({
+      color: 0xdfc29f,
+      size: 0.45,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.NormalBlending
+    });
+    this.disposables.push(dustMat);
+    this.dustPoints = new THREE.Points(dustGeo, dustMat);
+    this.group.add(this.dustPoints);
   }
 
   update(time, deltaTime, progress) {
@@ -383,6 +432,25 @@ export class Scene05HourglassKingdoms {
 
     this.grainUniforms.uTime.value = t;
     this.grainUniforms.uTransferProgress.value = transferVal;
+
+    // Spire disintegration debris cloud animation
+    const debrisActivity = smoothstep(6.0, 14.0, t) * (1.0 - smoothstep(32.0, 42.0, t));
+    if (this.dustPoints && this.dustPositions) {
+      this.dustPoints.material.opacity = debrisActivity * 0.7;
+      if (debrisActivity > 0.01) {
+        const posArr = this.dustPositions;
+        const initArr = this.dustInitial;
+        const speeds = this.dustSpeeds;
+        const count = speeds.length;
+        for (let i = 0; i < count; i++) {
+          let y = initArr[i * 3 + 1] - ((t * speeds[i]) % 26.0);
+          posArr[i * 3 + 1] = y;
+          posArr[i * 3 + 0] = initArr[i * 3 + 0] + Math.sin(t * 1.8 + i) * 0.5;
+          posArr[i * 3 + 2] = initArr[i * 3 + 2] + Math.cos(t * 1.8 + i) * 0.5;
+        }
+        this.dustPoints.geometry.attributes.position.needsUpdate = true;
+      }
+    }
 
     // Astrolabe Gimbal Rings Clockwork Motion
     if (this.astrolabeInner && this.astrolabeOuter) {
