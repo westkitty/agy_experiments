@@ -408,12 +408,20 @@ export class Scene08CathedralThousandDoors {
     if (partOpacity > 0.01) {
       const positions = this.escapingParticles.geometry.attributes.position.array;
       for (let i = 0; i < this.partCount; i++) {
-        positions[i * 3 + 0] += this.partVels[i * 3 + 0] * deltaTime;
-        positions[i * 3 + 1] += this.partVels[i * 3 + 1] * deltaTime;
+        const curX = positions[i * 3 + 0];
+        const curZ = positions[i * 3 + 2];
+        // Convective suction pulling weather motes toward center aisle with vortex swirl
+        const centerDraft = -curX * 0.65 * deltaTime;
+        const swirlY = Math.sin(curZ * 0.06 + t * 2.2) * 2.8 * deltaTime;
+        const swirlX = Math.cos(curZ * 0.06 + t * 2.2) * 1.8 * deltaTime;
+
+        positions[i * 3 + 0] += (this.partVels[i * 3 + 0] + swirlX) * deltaTime + centerDraft;
+        positions[i * 3 + 1] += (this.partVels[i * 3 + 1] + swirlY) * deltaTime;
         positions[i * 3 + 2] += this.partVels[i * 3 + 2] * deltaTime;
 
         if (positions[i * 3 + 1] < 0 || positions[i * 3 + 2] > 30) {
-          positions[i * 3 + 1] = 12 + Math.random() * 6;
+          positions[i * 3 + 0] = (Math.random() > 0.5 ? 1 : -1) * (18 + Math.random() * 8);
+          positions[i * 3 + 1] = 10 + Math.random() * 8;
           positions[i * 3 + 2] = -Math.random() * 180;
         }
       }
