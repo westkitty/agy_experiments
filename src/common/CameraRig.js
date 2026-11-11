@@ -29,6 +29,28 @@ export class CameraRig {
     this.camera.lookAt(this.currentTarget);
   }
 
+  /**
+   * Frame-rate independent exponential critically-damped spring smoothing
+   */
+  dampedUpdate(targetPos, targetLookAt, deltaTime, damping = 4.0) {
+    const factor = 1.0 - Math.exp(-damping * Math.min(deltaTime, 0.1));
+    this.currentPos.lerp(targetPos, factor);
+    this.currentTarget.lerp(targetLookAt, factor);
+    this.camera.position.copy(this.currentPos);
+    this.camera.lookAt(this.currentTarget);
+  }
+
+  /**
+   * Cinematic focal breathing: expands / contracts FOV dynamically during dramatic climaxes
+   */
+  applyFocalBreathing(baseFov, breathAmount, targetFov = null) {
+    const fov = targetFov !== null ? THREE.MathUtils.lerp(baseFov, targetFov, breathAmount) : baseFov + breathAmount;
+    if (Math.abs(this.camera.fov - fov) > 0.01) {
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
   updateDirect(pos, target, roll = 0) {
     this.camera.position.copy(pos);
     this.camera.up.set(Math.sin(roll), Math.cos(roll), 0);
