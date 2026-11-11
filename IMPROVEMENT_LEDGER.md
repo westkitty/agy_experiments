@@ -4,7 +4,7 @@
 - **Project**: The Impossible Cinema (Ten Experiments in Visual Impossibility)
 - **Repository**: `https://github.com/westkitty/agy_experiments`
 - **Default Branch**: `main`
-- **Active Development Branch**: `uplift/infinite-cinema-v2`
+- **Active Development Branch**: `uplift/infinite-cinema-v3`
 - **Deployment Target**: GitHub Pages (via GitHub Actions `.github/workflows/deploy.yml` on `main`)
 - **Protected Behaviors**:
   - Exactly 10 selectable experiments
@@ -20,7 +20,7 @@
   - Standalone bundled distribution (`dist/index.html`)
   - 10 procedural impossibility worlds
   - Verified 0 console errors, 0 page errors across all 10 scenes
-- **Current Run ID**: `RUN-20261111-OMNI-UPLIFT-20`
+- **Current Run ID**: `RUN-20261111-OMNI-UPLIFT-RUN2`
 
 ---
 
@@ -49,3 +49,4 @@
 | **18** | Visual Fidelity / Simulation | Umbilical tether between statue and titan was static flat strip | Added occult traveling energy pulse shader along ground tether connecting colossus heels to walking titan | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter18.png` | `bf2b241` |
 | **19** | Visual Fidelity / Shading | Crystal structures in aurora forge had uniform surface sheen | Added internal diamond facet reflections and chromatic prism dispersion to crystalline formations | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter19.png` | `772917f` |
 | **20** | Visual Fidelity / Cinematography | Flat city skyline transition at tide peak lacked celestial atmospheric shockwave | Added expanding iridescent prismatic shockwave ring above metropolis at tide climax | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter20.png` | `2aea56b` |
+| **21** | Visual Fidelity / Geology | Uniform canyon rock without object-pinned strata banding | Added object-pinned sedimentary geological strata striations and crystalline quartz glints | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter21.png` | `9639ba9` |

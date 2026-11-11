@@ -44,6 +44,7 @@ export class Scene03CanyonFloatingRings {
       vertexShader: `
         ${GLSL_NOISE}
         varying vec3 vWorldPos;
+        varying vec3 vLocalPos;
         varying vec3 vNormal;
         void main() {
           vNormal = normalize(normalMatrix * normal);
@@ -51,6 +52,7 @@ export class Scene03CanyonFloatingRings {
           // Rugged canyon terrain displacement
           float n = snoise(vec3(p.x * 0.015, p.z * 0.015, 0.0)) * 6.0;
           p.y += n;
+          vLocalPos = p;
           vec4 worldPos = modelMatrix * vec4(p, 1.0);
           vWorldPos = worldPos.xyz;
           gl_Position = projectionMatrix * viewMatrix * worldPos;
@@ -60,32 +62,40 @@ export class Scene03CanyonFloatingRings {
         ${GLSL_NOISE}
         uniform vec3 uSunDir;
         varying vec3 vWorldPos;
+        varying vec3 vLocalPos;
         varying vec3 vNormal;
 
         void main() {
-          // Sedimentary geological horizontal strata bands
-          float yBanding = vWorldPos.y * 0.35 + snoise(vec3(vWorldPos.xz * 0.05, vWorldPos.y * 0.1)) * 0.4;
-          float band = sin(yBanding * 3.14159);
+          // Sedimentary geological horizontal strata bands pinned to geology
+          float strataCoord = vLocalPos.y * 0.42 + snoise(vec3(vLocalPos.xz * 0.04, vLocalPos.y * 0.08)) * 0.35;
+          float band = sin(strataCoord * 3.14159);
 
           vec3 redSand = vec3(0.68, 0.28, 0.14);
           vec3 ochre = vec3(0.82, 0.52, 0.22);
-          vec3 darkIron = vec3(0.38, 0.15, 0.08);
-          vec3 creamChalk = vec3(0.88, 0.78, 0.62);
+          vec3 darkIron = vec3(0.32, 0.12, 0.06);
+          vec3 gypsumWhite = vec3(0.92, 0.86, 0.74);
+          vec3 desertVarnish = vec3(0.22, 0.11, 0.08);
 
-          vec3 rockCol = mix(redSand, ochre, smoothstep(-0.5, 0.5, band));
-          rockCol = mix(rockCol, darkIron, smoothstep(0.4, 0.9, sin(yBanding * 1.8)));
-          rockCol = mix(rockCol, creamChalk, smoothstep(0.85, 1.0, sin(yBanding * 6.0)) * 0.6);
+          vec3 rockCol = mix(redSand, ochre, smoothstep(-0.4, 0.4, band));
+          rockCol = mix(rockCol, darkIron, smoothstep(0.35, 0.85, sin(strataCoord * 2.1)));
+          rockCol = mix(rockCol, gypsumWhite, smoothstep(0.82, 0.98, sin(strataCoord * 7.5)) * 0.75);
+          rockCol = mix(rockCol, desertVarnish, smoothstep(0.7, 0.95, -vNormal.y) * 0.4);
 
-          // Micro-geological sediment striations
-          float microStrata = sin(yBanding * 18.0) * 0.12;
-          rockCol += vec3(0.15, 0.08, 0.04) * microStrata;
+          // Multi-tier micro-geological sediment striations
+          float microStrata = sin(strataCoord * 28.0) * 0.15;
+          rockCol += vec3(0.18, 0.1, 0.05) * microStrata;
 
           // Sunlight diffuse with warm specular sandstone sheen
           float NdotL = max(dot(vNormal, uSunDir), 0.0);
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
-          float spec = pow(max(dot(reflect(-uSunDir, vNormal), viewDir), 0.0), 16.0) * 0.25;
+          vec3 halfDir = normalize(uSunDir + viewDir);
+          float spec = pow(max(dot(vNormal, halfDir), 0.0), 16.0) * 0.25;
 
-          vec3 finalColor = rockCol * (0.28 + NdotL * 0.85) + vec3(1.0, 0.8, 0.5) * spec;
+          // High-frequency quartz crystal sparkle glints on sheared faces
+          float crystalNoise = snoise(vLocalPos * 1.8);
+          float quartzGlint = pow(max(dot(vNormal, halfDir), 0.0), 64.0) * smoothstep(0.3, 0.8, crystalNoise) * 1.8;
+
+          vec3 finalColor = rockCol * (0.28 + NdotL * 0.85) + vec3(1.0, 0.82, 0.55) * spec + vec3(1.0, 0.95, 0.8) * quartzGlint;
 
           // Atmospheric amber distance haze
           float dist = length(vWorldPos.xz);
@@ -153,6 +163,7 @@ export class Scene03CanyonFloatingRings {
         vertexShader: `
           ${GLSL_NOISE}
           varying vec3 vWorldPos;
+          varying vec3 vLocalPos;
           varying vec3 vNormal;
           void main() {
             vNormal = normalize(normalMatrix * normal);
@@ -160,6 +171,7 @@ export class Scene03CanyonFloatingRings {
             // Rugged rock displacement on edges
             float disp = snoise(p * 0.08) * 1.6;
             p += normal * disp;
+            vLocalPos = p;
             vec4 worldPos = modelMatrix * vec4(p, 1.0);
             vWorldPos = worldPos.xyz;
             gl_Position = projectionMatrix * viewMatrix * worldPos;
