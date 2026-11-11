@@ -437,8 +437,14 @@ export class Scene04OrchardOfMoons {
         const orbitZ = Math.sin(theta) * r;
 
         m.mesh.position.lerpVectors(m.anchor, new THREE.Vector3(orbitX, orbitY, orbitZ), s);
+
+        // Dynamic lunar tidal libration & axial precession in flight
+        m.mesh.rotation.y = theta * 1.4 + idx * 0.3;
+        m.mesh.rotation.x = Math.sin(theta * 2.2 + idx) * 0.32 * s;
+        m.mesh.rotation.z = Math.cos(theta * 1.7 + idx * 0.6) * 0.26 * s;
       } else {
         m.mesh.position.copy(m.anchor);
+        m.mesh.rotation.set(0, Math.sin(t * 0.8 + idx * 0.4) * 0.06, 0);
       }
     });
 
