@@ -78,5 +78,6 @@
 
 | Iteration | Category / Subsystem | Target | Specific Bottleneck / Discovery | Implementation Description | Verification & Render Artifact | Commit SHA |
 | :---: | :---: | :---: | :--- | :--- | :---: | :---: |
-| **41** | Visual Fidelity / Shader Physics | Spacetime membrane filament mesh in Scene 01 | Membrane filament grid had uniform golden hue under extreme gravitational well deformation | Added spacetime tensor curvature chromatic dispersion shifting filaments dynamically (blue-shifted compression, red-shifted tension) | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter41.png` | `890e332` |
+| **41** | Visual Fidelity / Shader Physics | Spacetime membrane filament mesh in Scene 01 | Membrane filament grid had uniform golden hue under extreme gravitational well deformation | Added spacetime tensor curvature chromatic dispersion shifting filaments dynamically (blue-shifted compression, red-shifted tension) | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter41.png` | `677f313` |
+| **42** | Visual Fidelity / Atmospheric Optics | Desert floor horizon & monolith bases in Scene 02 | Distant salt desert horizon had abrupt planar fog boundary without solar thermal convection | Added inferior mirage atmospheric thermal refraction shimmer layer and micro-shimmer displacement on distant monolith bases | 0 console errors, verified render `/tmp/impossible_cinema_tests/test_iter42.png` | `5dc926d` |
 

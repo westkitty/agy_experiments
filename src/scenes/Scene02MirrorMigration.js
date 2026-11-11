@@ -124,8 +124,14 @@ export class Scene02MirrorMigration {
           finalColor += vec3(1.0, 0.9, 0.7) * caustics * 0.4;
           finalColor += sunReflect;
 
-          // Horizon distance fog
+          // Horizon distance fog with thermal mirage atmospheric refraction shimmer
           float d = length(vWorldPos.xz);
+          float mirageBand = smoothstep(55.0, 240.0, d);
+          float mirageWave = sin(vWorldPos.x * 0.18 + uTime * 3.2) * cos(vWorldPos.z * 0.14 - uTime * 2.6);
+          float mirageShimmer = sin(mirageWave * 3.5 + uTime * 4.8) * 0.5 + 0.5;
+          vec3 mirageSky = mix(vec3(0.92, 0.82, 0.65), vec3(0.35, 0.55, 0.8), mirageShimmer);
+          finalColor = mix(finalColor, mirageSky, mirageBand * 0.42 * (0.55 + 0.45 * mirageShimmer));
+
           float fog = 1.0 - exp(-d * 0.003);
           finalColor = mix(finalColor, vec3(0.08, 0.1, 0.15), fog);
 
@@ -193,6 +199,11 @@ export class Scene02MirrorMigration {
           // Submerged beneath water at y = -14, rises to full height
           float elevatedY = aBasePos.y + (pos.y * 0.5) - 14.0 + (uRise * 18.0);
           vec3 worldP = vec3(aBasePos.x + pos.x, elevatedY, aBasePos.z + pos.z);
+
+          // Thermal mirage refraction offset on distant monolith bases near the salt flats
+          float distXZ = length(worldP.xz);
+          float baseHaze = smoothstep(50.0, 220.0, distXZ) * max(0.0, 1.0 - max(elevatedY, 0.0) * 0.15);
+          worldP.x += sin(elevatedY * 1.5 + uTime * 4.5 + worldP.z * 0.05) * baseHaze * 0.22;
 
           vWorldPos = worldP;
 
