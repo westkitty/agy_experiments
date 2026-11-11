@@ -207,13 +207,33 @@ export class Scene05HourglassKingdoms {
       this.group.add(col);
     }
 
-    // 3. Central Bronze Ring at Waist
+    // 3. Central Bronze Ring & Astronomical Astrolabe Gimbal Rings at Waist
     const waistGeo = new THREE.TorusGeometry(3.6, 0.9, 16, 32);
     waistGeo.rotateX(Math.PI / 2);
     this.disposables.push(waistGeo);
     const waistMesh = new THREE.Mesh(waistGeo, bronzeMat);
     waistMesh.position.y = 0;
     this.group.add(waistMesh);
+
+    // Inner & Outer Astrolabe Gimbal Rings with Celestial Graduations
+    const brassMat = new THREE.MeshStandardMaterial({
+      color: 0xd4a048,
+      metalness: 0.9,
+      roughness: 0.25
+    });
+    this.disposables.push(brassMat);
+
+    const innerGimbalGeo = new THREE.TorusGeometry(5.8, 0.3, 16, 48);
+    this.disposables.push(innerGimbalGeo);
+    this.astrolabeInner = new THREE.Mesh(innerGimbalGeo, brassMat);
+    this.astrolabeInner.rotation.x = Math.PI / 2;
+    this.group.add(this.astrolabeInner);
+
+    const outerGimbalGeo = new THREE.TorusGeometry(8.2, 0.35, 16, 48);
+    this.disposables.push(outerGimbalGeo);
+    this.astrolabeOuter = new THREE.Mesh(outerGimbalGeo, brassMat);
+    this.astrolabeOuter.rotation.x = Math.PI / 2;
+    this.group.add(this.astrolabeOuter);
 
     // 4. Double Glass Bulbs
     // Curve for hourglass profile
@@ -282,6 +302,14 @@ export class Scene05HourglassKingdoms {
 
     this.grainUniforms.uTime.value = t;
     this.grainUniforms.uTransferProgress.value = transferVal;
+
+    // Astrolabe Gimbal Rings Clockwork Motion
+    if (this.astrolabeInner && this.astrolabeOuter) {
+      this.astrolabeInner.rotation.z += deltaTime * 0.45;
+      this.astrolabeInner.rotation.y = Math.sin(t * 0.4) * 0.22;
+      this.astrolabeOuter.rotation.z -= deltaTime * 0.28;
+      this.astrolabeOuter.rotation.x = Math.PI / 2 + Math.cos(t * 0.35) * 0.18;
+    }
 
     // Cinematic Camera Choreography
     let camPos = new THREE.Vector3();
