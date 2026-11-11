@@ -291,10 +291,37 @@ export class Scene06WalkingShadow {
     const tetherGeo = new THREE.PlaneGeometry(12, 1);
     tetherGeo.rotateX(-Math.PI / 2);
     this.disposables.push(tetherGeo);
-    this.tetherMat = new THREE.MeshBasicMaterial({
-      color: 0x050408,
+    this.tetherMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uOpacity: { value: 0.85 }
+      },
       transparent: true,
-      opacity: 0.85
+      depthWrite: false,
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        void main() {
+          vUv = uv;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPos = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform float uOpacity;
+        varying vec2 vUv;
+        varying vec3 vWorldPos;
+        void main() {
+          // Occult umbilical energy pulses traveling along tether from statue to titan
+          float pulse = sin(vUv.y * 22.0 - uTime * 5.0) * 0.5 + 0.5;
+          float edgeFade = sin(vUv.x * 3.14159);
+          vec3 voidDark = vec3(0.003, 0.005, 0.01);
+          vec3 occultGlow = vec3(0.08, 0.04, 0.14) * pulse;
+          gl_FragColor = vec4(voidDark + occultGlow, edgeFade * uOpacity);
+        }
+      `
     });
     this.disposables.push(this.tetherMat);
     this.tetherMesh = new THREE.Mesh(tetherGeo, this.tetherMat);
@@ -325,8 +352,8 @@ export class Scene06WalkingShadow {
     if (this.tetherMesh) {
       const tetherLen = Math.max(1.0, 50.0 - targetZ);
       this.tetherMesh.scale.set(1.0, 1.0, tetherLen);
-      this.tetherMesh.position.set(0, 0.05, 50.0 - tetherLen * 0.5);
-      this.tetherMat.opacity = (1.0 - smoothstep(28, 38, t) * 0.7) * 0.85;
+      this.tetherMat.uniforms.uOpacity.value = (1.0 - smoothstep(28, 38, t) * 0.7) * 0.85;
+      this.tetherMat.uniforms.uTime.value = t;
     }
 
     // Articulated Walking Stride
