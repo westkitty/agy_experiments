@@ -53,31 +53,79 @@ export class Scene01GravityLoom {
         }
       `,
       fragmentShader: `
+        ${GLSL_NOISE}
         uniform vec3 uRimColor;
+        uniform float uTime;
         varying vec3 vNormal;
         varying vec3 vWorldPos;
         void main() {
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
-          float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.5);
-          vec3 darkCore = vec3(0.015, 0.018, 0.025);
-          vec3 finalColor = mix(darkCore, uRimColor * 1.5, fresnel);
+          float NdotV = max(dot(viewDir, vNormal), 0.0);
+
+          // Pure black event horizon core
+          float horizon = smoothstep(0.04, 0.32, NdotV);
+
+          // Einstein relativistic photon ring
+          float photonRing = exp(-pow(NdotV - 0.07, 2.0) * 180.0) * 2.8;
+
+          // Gravitational lensing fringe: inverted optical distortion of the golden cosmos
+          vec3 refractDir = refract(-viewDir, vNormal, 0.78);
+          float lensStar = snoise(refractDir * 16.0 + uTime * 0.1);
+          float starGlint = pow(max(lensStar, 0.0), 8.0) * (1.0 - horizon);
+
+          vec3 photonCol = mix(vec3(1.0, 0.85, 0.4), vec3(0.5, 0.85, 1.0), 0.35);
+          vec3 coreColor = vec3(0.002, 0.003, 0.005);
+          vec3 finalColor = mix(coreColor, uRimColor * 1.2, pow(1.0 - NdotV, 3.0));
+          finalColor += photonCol * photonRing;
+          finalColor += vec3(1.0, 0.9, 0.6) * starGlint * 2.2;
+
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `
     });
+    this.massMat = massMat;
     this.disposables.push(massMat);
 
-    // Accretion halo ring geometry
+    // Accretion halo ring geometry with relativistic Doppler beaming
     const ringGeo = new THREE.TorusGeometry(6.4, 0.35, 8, 32);
     ringGeo.rotateX(Math.PI / 2.3);
     this.disposables.push(ringGeo);
 
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xffd277,
+    const ringMat = new THREE.ShaderMaterial({
       transparent: true,
-      opacity: 0.65,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      uniforms: {
+        uTime: { value: 0 }
+      },
+      vertexShader: `
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        void main() {
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          // Relativistic Doppler beaming on orbiting accretion disc
+          float doppler = dot(vNormal, viewDir);
+          float boost = 1.0 + doppler * 0.65;
+          vec3 blueBoost = vec3(0.5, 0.85, 1.2) * smoothstep(0.0, 1.0, doppler);
+          vec3 redShift = vec3(1.2, 0.5, 0.2) * smoothstep(0.0, -1.0, doppler);
+          vec3 discColor = mix(vec3(1.0, 0.85, 0.4), blueBoost + redShift, 0.45);
+          gl_FragColor = vec4(discColor * boost * 1.5, 0.7);
+        }
+      `
     });
+    this.massRingMat = ringMat;
     this.disposables.push(ringMat);
 
     for (let i = 0; i < 3; i++) {
@@ -356,6 +404,8 @@ export class Scene01GravityLoom {
     this.membraneUniforms.uMass1.value.copy(this.celestialMasses[0].pos);
     this.membraneUniforms.uMass2.value.copy(this.celestialMasses[1].pos);
     this.membraneUniforms.uMass3.value.copy(this.celestialMasses[2].pos);
+    if (this.massMat) this.massMat.uniforms.uTime.value = t;
+    if (this.massRingMat) this.massRingMat.uniforms.uTime.value = t;
 
     // Climax: membrane splits along the seam (peaks around t = 30-40, closes by t = 46)
     const splitProgress = smoothstep(25, 34, t) * (1.0 - smoothstep(39, 47, t));

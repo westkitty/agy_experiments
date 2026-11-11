@@ -4324,17 +4324,58 @@ float hash21(vec2 p) {
           gl_Position = projectionMatrix * viewMatrix * worldPos;
         }
       `,fragmentShader:`
+        ${xu}
         uniform vec3 uRimColor;
+        uniform float uTime;
         varying vec3 vNormal;
         varying vec3 vWorldPos;
         void main() {
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
-          float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.5);
-          vec3 darkCore = vec3(0.015, 0.018, 0.025);
-          vec3 finalColor = mix(darkCore, uRimColor * 1.5, fresnel);
+          float NdotV = max(dot(viewDir, vNormal), 0.0);
+
+          // Pure black event horizon core
+          float horizon = smoothstep(0.04, 0.32, NdotV);
+
+          // Einstein relativistic photon ring
+          float photonRing = exp(-pow(NdotV - 0.07, 2.0) * 180.0) * 2.8;
+
+          // Gravitational lensing fringe: inverted optical distortion of the golden cosmos
+          vec3 refractDir = refract(-viewDir, vNormal, 0.78);
+          float lensStar = snoise(refractDir * 16.0 + uTime * 0.1);
+          float starGlint = pow(max(lensStar, 0.0), 8.0) * (1.0 - horizon);
+
+          vec3 photonCol = mix(vec3(1.0, 0.85, 0.4), vec3(0.5, 0.85, 1.0), 0.35);
+          vec3 coreColor = vec3(0.002, 0.003, 0.005);
+          vec3 finalColor = mix(coreColor, uRimColor * 1.2, pow(1.0 - NdotV, 3.0));
+          finalColor += photonCol * photonRing;
+          finalColor += vec3(1.0, 0.9, 0.6) * starGlint * 2.2;
+
           gl_FragColor = vec4(finalColor, 1.0);
         }
-      `});this.disposables.push(a);let o=new Ga(6.4,.35,8,32);o.rotateX(Math.PI/2.3),this.disposables.push(o);let s=new Sr({color:16765559,transparent:!0,opacity:.65,blending:2});this.disposables.push(s);for(let e=0;e<3;e++){let t=new sn,n=new Y(i,a),r=new Y(o,s);t.add(n),t.add(r),this.group.add(t),this.celestialMasses.push({group:t,mesh:n,ring:r,baseAngle:e*Math.PI*2/3,radius:35+e*15,speed:.35+e*.1,pos:new K})}let c=new Ha(360,360,140,140);c.rotateX(-Math.PI/2),this.disposables.push(c),this.membraneUniforms={uTime:{value:0},uMass1:{value:new K},uMass2:{value:new K},uMass3:{value:new K},uSplitAmount:{value:0},uClimaxFactor:{value:0}};let l=new X({uniforms:this.membraneUniforms,wireframe:!1,transparent:!0,side:2,vertexShader:`
+      `});this.massMat=a,this.disposables.push(a);let o=new Ga(6.4,.35,8,32);o.rotateX(Math.PI/2.3),this.disposables.push(o);let s=new X({transparent:!0,blending:2,side:2,depthWrite:!1,uniforms:{uTime:{value:0}},vertexShader:`
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = projectionMatrix * viewMatrix * wp;
+        }
+      `,fragmentShader:`
+        uniform float uTime;
+        varying vec3 vWorldPos;
+        varying vec3 vNormal;
+        void main() {
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          // Relativistic Doppler beaming on orbiting accretion disc
+          float doppler = dot(vNormal, viewDir);
+          float boost = 1.0 + doppler * 0.65;
+          vec3 blueBoost = vec3(0.5, 0.85, 1.2) * smoothstep(0.0, 1.0, doppler);
+          vec3 redShift = vec3(1.2, 0.5, 0.2) * smoothstep(0.0, -1.0, doppler);
+          vec3 discColor = mix(vec3(1.0, 0.85, 0.4), blueBoost + redShift, 0.45);
+          gl_FragColor = vec4(discColor * boost * 1.5, 0.7);
+        }
+      `});this.massRingMat=s,this.disposables.push(s);for(let e=0;e<3;e++){let t=new sn,n=new Y(i,a),r=new Y(o,s);t.add(n),t.add(r),this.group.add(t),this.celestialMasses.push({group:t,mesh:n,ring:r,baseAngle:e*Math.PI*2/3,radius:35+e*15,speed:.35+e*.1,pos:new K})}let c=new Ha(360,360,140,140);c.rotateX(-Math.PI/2),this.disposables.push(c),this.membraneUniforms={uTime:{value:0},uMass1:{value:new K},uMass2:{value:new K},uMass3:{value:new K},uSplitAmount:{value:0},uClimaxFactor:{value:0}};let l=new X({uniforms:this.membraneUniforms,wireframe:!1,transparent:!0,side:2,vertexShader:`
         ${xu}
         uniform float uTime;
         uniform vec3 uMass1;
@@ -4496,7 +4537,7 @@ float hash21(vec2 p) {
           float edgeFade = 1.0 - smoothstep(100.0, 170.0, length(vWorldPos.xz));
           gl_FragColor = vec4(col, edgeFade * 0.9);
         }
-      `});this.disposables.push(d),this.subLoomMesh=new Y(u,d),this.group.add(this.subLoomMesh);let f=1500,p=new Float32Array(f*3);for(let e=0;e<f;e++)p[e*3+0]=(Math.random()-.5)*800,p[e*3+1]=(Math.random()-.5)*400-50,p[e*3+2]=(Math.random()-.5)*800;let m=new ur;m.setAttribute(`position`,new Yn(p,3)),this.disposables.push(m);let h=new ci({color:13938487,size:1.8,transparent:!0,opacity:.65});this.disposables.push(h),this.stars=new pi(m,h),this.group.add(this.stars),n.add(this.group)}update(e,t,n){let r=e%this.duration;this.celestialMasses.forEach((e,t)=>{let n=e.baseAngle+r*e.speed*.25,i=e.radius+Math.sin(r*.4+t)*8,a=Math.cos(n)*i,o=Math.sin(n)*i,s=8-$(12,28,r)*(1-$(36,46,r))*14+Math.sin(r*.8+t)*2;e.pos.set(a,s,o),e.group.position.copy(e.pos),e.ring&&(e.ring.rotation.z=r*(1.2+t*.4))}),this.membraneUniforms.uTime.value=r,this.membraneUniforms.uMass1.value.copy(this.celestialMasses[0].pos),this.membraneUniforms.uMass2.value.copy(this.celestialMasses[1].pos),this.membraneUniforms.uMass3.value.copy(this.celestialMasses[2].pos);let i=$(25,34,r)*(1-$(39,47,r));this.membraneUniforms.uSplitAmount.value=bu(0,1,i);let a=new K,o=new K(0,-6,0);if(r<15){let e=r/15;a.set(Math.cos(e*.6+.3)*110,45-e*15,Math.sin(e*.6+.3)*110),o.set(0,-5,0)}else if(r<28){let e=(r-15)/13;a.set(Math.cos(1.2+e*1.1)*(80-e*30),25-Math.sin(e*Math.PI)*16,Math.sin(1.2+e*1.1)*(80-e*30)),o.copy(this.celestialMasses[0].pos)}else if(r<40){let e=(r-28)/12;a.set(Math.sin(e*1.4)*15,22-e*8,-50+e*100),o.set(0,-18,-20+e*80)}else{let e=(r-40)/10;a.set(Math.cos(2.8+e*.8)*(50+e*60),14+e*31,Math.sin(2.8+e*.8)*(50+e*60)),o.set(0,-4,0)}this.camera.position.copy(a),this.camera.lookAt(o)}render(e){e.render(this.scene,this.camera)}resize(e,t){this.camera.aspect=e/t,this.camera.updateProjectionMatrix()}dispose(){this.scene.remove(this.group),this.disposables.forEach(e=>{e&&typeof e.dispose==`function`&&e.dispose()}),this.disposables=[]}},Cu=class{constructor(){this.name=`The Mirror Migration`,this.duration=50,this.group=new sn,this.disposables=[]}init(e,t,n){this.camera=t,this.scene=n,n.background=new J(790552),n.fog=new hn(790552,.004),t.fov=48,t.near=.5,t.far=1600,t.updateProjectionMatrix();let r=new Wo(2107448,1);this.group.add(r),this.sunLight=new Uo(16772829,1.8),this.sunLight.position.set(0,8,-300),this.group.add(this.sunLight);let i=new Wa(900,32,16);this.disposables.push(i);let a=new X({side:1,vertexShader:`
+      `});this.disposables.push(d),this.subLoomMesh=new Y(u,d),this.group.add(this.subLoomMesh);let f=1500,p=new Float32Array(f*3);for(let e=0;e<f;e++)p[e*3+0]=(Math.random()-.5)*800,p[e*3+1]=(Math.random()-.5)*400-50,p[e*3+2]=(Math.random()-.5)*800;let m=new ur;m.setAttribute(`position`,new Yn(p,3)),this.disposables.push(m);let h=new ci({color:13938487,size:1.8,transparent:!0,opacity:.65});this.disposables.push(h),this.stars=new pi(m,h),this.group.add(this.stars),n.add(this.group)}update(e,t,n){let r=e%this.duration;this.celestialMasses.forEach((e,t)=>{let n=e.baseAngle+r*e.speed*.25,i=e.radius+Math.sin(r*.4+t)*8,a=Math.cos(n)*i,o=Math.sin(n)*i,s=8-$(12,28,r)*(1-$(36,46,r))*14+Math.sin(r*.8+t)*2;e.pos.set(a,s,o),e.group.position.copy(e.pos),e.ring&&(e.ring.rotation.z=r*(1.2+t*.4))}),this.membraneUniforms.uTime.value=r,this.membraneUniforms.uMass1.value.copy(this.celestialMasses[0].pos),this.membraneUniforms.uMass2.value.copy(this.celestialMasses[1].pos),this.membraneUniforms.uMass3.value.copy(this.celestialMasses[2].pos),this.massMat&&(this.massMat.uniforms.uTime.value=r),this.massRingMat&&(this.massRingMat.uniforms.uTime.value=r);let i=$(25,34,r)*(1-$(39,47,r));this.membraneUniforms.uSplitAmount.value=bu(0,1,i);let a=new K,o=new K(0,-6,0);if(r<15){let e=r/15;a.set(Math.cos(e*.6+.3)*110,45-e*15,Math.sin(e*.6+.3)*110),o.set(0,-5,0)}else if(r<28){let e=(r-15)/13;a.set(Math.cos(1.2+e*1.1)*(80-e*30),25-Math.sin(e*Math.PI)*16,Math.sin(1.2+e*1.1)*(80-e*30)),o.copy(this.celestialMasses[0].pos)}else if(r<40){let e=(r-28)/12;a.set(Math.sin(e*1.4)*15,22-e*8,-50+e*100),o.set(0,-18,-20+e*80)}else{let e=(r-40)/10;a.set(Math.cos(2.8+e*.8)*(50+e*60),14+e*31,Math.sin(2.8+e*.8)*(50+e*60)),o.set(0,-4,0)}this.camera.position.copy(a),this.camera.lookAt(o)}render(e){e.render(this.scene,this.camera)}resize(e,t){this.camera.aspect=e/t,this.camera.updateProjectionMatrix()}dispose(){this.scene.remove(this.group),this.disposables.forEach(e=>{e&&typeof e.dispose==`function`&&e.dispose()}),this.disposables=[]}},Cu=class{constructor(){this.name=`The Mirror Migration`,this.duration=50,this.group=new sn,this.disposables=[]}init(e,t,n){this.camera=t,this.scene=n,n.background=new J(790552),n.fog=new hn(790552,.004),t.fov=48,t.near=.5,t.far=1600,t.updateProjectionMatrix();let r=new Wo(2107448,1);this.group.add(r),this.sunLight=new Uo(16772829,1.8),this.sunLight.position.set(0,8,-300),this.group.add(this.sunLight);let i=new Wa(900,32,16);this.disposables.push(i);let a=new X({side:1,vertexShader:`
         varying vec3 vWorldPos;
         void main() {
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
