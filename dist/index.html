@@ -4668,6 +4668,17 @@ float hash21(vec2 p) {
           vec3 giantSun = vec3(1.2, 0.95, 0.55) * pow(horizonSunRay, 6.0) * 4.0;
           envCol = mix(envCol, envCol + giantSun, uSunAlign);
 
+          // Prismatic glass edge bevels with spectral rainbow dispersion
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          float edgeAngle = abs(dot(viewDir, vWorldNormal));
+          float bevelGlint = pow(1.0 - edgeAngle, 4.5);
+          vec3 rainbow = vec3(
+            sin(edgeAngle * 14.0) * 0.5 + 0.5,
+            sin(edgeAngle * 14.0 + 2.09) * 0.5 + 0.5,
+            sin(edgeAngle * 14.0 + 4.18) * 0.5 + 0.5
+          );
+          envCol += rainbow * bevelGlint * 1.5;
+
           // Thin glass frame border
           float frame = 1.0;
           if (abs(vWorldNormal.z) < 0.6) frame = 0.25; // Dark metallic frame on sides
