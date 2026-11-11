@@ -256,7 +256,8 @@ export class Scene03CanyonFloatingRings {
 
     this.shaftMat = new THREE.ShaderMaterial({
       uniforms: {
-        uOpacity: { value: 0 }
+        uOpacity: { value: 0 },
+        uTime: { value: 0 }
       },
       transparent: true,
       side: THREE.DoubleSide,
@@ -274,12 +275,19 @@ export class Scene03CanyonFloatingRings {
       `,
       fragmentShader: `
         uniform float uOpacity;
+        uniform float uTime;
         varying vec3 vWorldPos;
         varying vec2 vUv;
         void main() {
           float verticalFade = sin(vUv.y * 3.14159);
-          vec3 amberLight = vec3(1.0, 0.75, 0.45);
-          float alpha = verticalFade * uOpacity * 0.22;
+          // Sweeping angular occlusion rays from counter-rotating stone rings
+          float angle = atan(vWorldPos.z, vWorldPos.x);
+          float ray1 = pow(sin(angle * 7.0 + uTime * 0.4) * 0.5 + 0.5, 3.0);
+          float ray2 = pow(sin(angle * 13.0 - uTime * 0.6) * 0.5 + 0.5, 2.5);
+          float rayPattern = mix(0.4, 1.4, ray1 * ray2);
+
+          vec3 amberLight = vec3(1.1, 0.8, 0.45) * rayPattern;
+          float alpha = verticalFade * uOpacity * 0.28 * rayPattern;
           gl_FragColor = vec4(amberLight, alpha);
         }
       `
@@ -362,6 +370,7 @@ export class Scene03CanyonFloatingRings {
 
     // Light shaft visibility through newly opened spaces
     this.shaftMat.uniforms.uOpacity.value = smoothLift;
+    this.shaftMat.uniforms.uTime.value = t;
 
     // Cinematic Camera Choreography
     let camPos = new THREE.Vector3();
